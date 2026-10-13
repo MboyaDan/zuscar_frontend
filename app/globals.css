@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+/* "Zuscar Evening" tokens. Saffron is a fill with Midnight text, never text on Cream.
+   Ember and Danger are close: every error or void state also carries an icon and a label. */
+@theme {
+  --color-midnight: #0e1b2c;
+  --color-teal-brand: #0f766e;
+  --color-ember: #c2410c;
+  --color-saffron: #f4b942;
+  --color-cream: #faf6ef;
+  --color-stone-brand: #e6ded0;
+  --color-slate-brand: #2b3138;
+  --color-success: #1e7a46;
+  --color-danger: #b42318;
+
+  --font-heading: "Outfit Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+@layer base {
+  html { background: var(--color-cream); }
+  body {
+    background: var(--color-cream);
+    color: var(--color-slate-brand);
+    font-family: var(--font-body);
+  }
+  h1, h2, h3 { font-family: var(--font-heading); }
+  :focus-visible { outline: 3px solid var(--color-teal-brand); outline-offset: 2px; }
+}
+
+@layer components {
+  /* Money and counts line up in columns. */
+  .money { font-variant-numeric: tabular-nums; }
+  /* Large touch and click targets (at least 44 px). */
+  .target { min-height: 44px; min-width: 44px; }
+}

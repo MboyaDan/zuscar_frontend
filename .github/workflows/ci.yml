@@ -1,0 +1,20 @@
+# UNVERIFIED: has not run (no GitHub in the authoring sandbox). Action versions are major tags.
+name: ci
+on:
+  push: { branches: [main] }
+  pull_request:
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    env:
+      BACKEND_URL: http://localhost:8080
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run check:brand
+      - run: npm run build
