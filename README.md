@@ -2,7 +2,16 @@
 
 Next.js web app for Zuscar. This repository is **independent**: it deploys to Vercel on its own. The Go API lives in the separate `zuscar-backend` repository (Docker locally, Render in production). Project documents are in the backend repository's `docs/`; this repo keeps only `docs/design-tokens.md`.
 
-**Status: Stage 5 (shell).** The page shows the layout, brand, test-environment banner and whether the backend is reachable. Login and the POS screens arrive in later stages.
+**Status: Stage 8, part a (foundation).** Sign-in, forced password change, the app shell with permission-aware navigation, the connection indicator, the password re-entry prompt and the dashboard. The users, roles, audit-log and settings screens arrive in the next patches of Stage 8; the POS screens come in later stages.
+
+## How the app is organised
+- `lib/api.ts`: the only code that calls the backend. Same-origin `/api/v1`, CSRF header on state-changing calls, one `ApiError` shape (code, message, field messages, request id), `newIdempotencyKey()` for calls that must not be applied twice.
+- `lib/session.tsx`: who is signed in (`GET /auth/me`) and `can(permission)`. Permissions come from the API on every load; hiding a menu item is a convenience, the API refuses what a user may not do.
+- `lib/reauth.tsx`: `withReauth(() => api(...))` opens the password prompt when the API answers `reauth_required` and retries once.
+- `lib/nav.ts`: the navigation list. A screen is added here when its page exists.
+- `app/(app)/`: signed-in screens, behind the gate in `layout.tsx`. `app/login`, `app/change-password` and `app/help/outage` are outside the gate on purpose.
+- `proxy.ts`: sends someone with no session cookie to the sign-in page. Not a security check.
+- `components/ui.tsx`: buttons, fields, alerts, modal, loading, empty and error states. Every error state carries an icon and a word.
 
 ## Run it locally
 You need Node.js 22 (anything from 20.9 up works). **No Docker is needed for the frontend** (Vercel builds it from source). Start the backend first by following the backend README (`docker compose up --build -d`).
@@ -14,9 +23,9 @@ You need Node.js 22 (anything from 20.9 up works). **No Docker is needed for the
 
    `.env.local` is git-ignored. The defaults (`http://localhost:3000` and `http://localhost:8080`) already match a locally running backend.
 3. `npm run dev`
-4. Open http://localhost:3000. You should see "Backend connected". As a direct check, http://localhost:3000/api/v1/health should show `{"status":"ok"}`: that request went from the web app to your Docker backend.
+4. Open http://localhost:3000. You should land on the sign-in page with "Connected" at the bottom. In development the backend's `seed-dev` command creates fictional users (`dev.owner`, `dev.manager`, ...); its output prints the shared development password. As a direct check, http://localhost:3000/api/v1/health should show `{"status":"ok"}`: that request went from the web app to your Docker backend.
 
-If it says "Backend not reachable": confirm `docker compose ps` in the backend repo shows it running, that http://localhost:8080/healthz works, and that `BACKEND_URL` in `.env.local` is right. Restart `npm run dev` after editing `.env.local`.
+If the indicator says "Offline": confirm `docker compose ps` in the backend repo shows it running, that http://localhost:8080/healthz works, and that `BACKEND_URL` in `.env.local` is right. Restart `npm run dev` after editing `.env.local`.
 
 ## How the frontend finds the backend (nothing hard-coded)
 The browser only ever calls **its own origin** under `/api/...`. Next.js forwards those requests to the backend using `BACKEND_URL` (see `next.config.ts`). So there is no CORS to configure, and the session cookie stays first-party.
