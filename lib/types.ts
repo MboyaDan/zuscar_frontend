@@ -69,3 +69,29 @@ export type AuditList = { items: AuditEntry[]; next_cursor: string };
 export type TaxRate = { id: number; code: string; name: string; rate_bp: number; treatment: "standard" | "zero_rated" | "exempt"; active: boolean };
 
 export type SettingsMap = Record<string, unknown>;
+
+export type Module = "restaurant" | "bar";
+
+export type Category = { id: number; module: Module; name: string; sort_order: number; active: boolean };
+
+export type Modifier = { id: number; name: string; price_delta_cents: number; active: boolean };
+
+export type Product = {
+  id: number;
+  category_id: number;
+  category_name: string;
+  module: Module;
+  name: string;
+  sku: string | null;
+  price_cents: number;
+  tax_rate: { id: number; code: string; name: string; rate_bp: number; treatment: TaxRate["treatment"] };
+  is_available: boolean;
+  kitchen_routed: boolean;
+  modifier_ids: number[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type PriceHistoryItem = { price_cents: number; effective_from: string; changed_by: number | null };
+
+export type CatalogueData = { categories: Category[]; modifiers: Modifier[]; rates: TaxRate[]; products: Product[] };
