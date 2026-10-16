@@ -108,6 +108,6 @@ export async function api<T = void>(path: string, opts: RequestOptions = {}): Pr
 
 /** A short, human line for any thrown value. */
 export function errorMessage(err: unknown): string {
-  if (err instanceof ApiError) return err.message;
+  if (err instanceof ApiError) return err.message.charAt(0).toUpperCase() + err.message.slice(1);
   return "Something went wrong. Please try again.";
 }
