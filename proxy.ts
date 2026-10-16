@@ -11,6 +11,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Everything except the sign-in page, the help pages, the API and static assets.
-  matcher: ["/((?!api|_next|login|help|icon.svg|apple-icon.png|favicon.ico).*)"],
+  // Everything except the sign-in page, the help pages, the API and static assets. /brand/ must be listed: the logo
+  // is shown on the sign-in page, before any session cookie exists, and a redirect there turns the image into a broken icon.
+  matcher: ["/((?!api|_next|brand/|login|help|icon.svg|apple-icon.png|favicon.ico).*)"],
 };

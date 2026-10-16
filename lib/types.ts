@@ -32,3 +32,40 @@ export type UserView = {
 export type UserList = { items: UserView[]; next_cursor: string };
 
 export type AssignableRole = { code: string; name: string; description: string };
+
+export type Role = {
+  id: number;
+  code: string;
+  name: string;
+  description: string;
+  is_protected: boolean;
+  is_template: boolean;
+  permissions: string[];
+  user_count: number;
+};
+
+export type PermissionItem = { id: number; key: string; description: string; is_protected: boolean };
+
+export type AffectedUser = { id: number; username: string };
+
+export type AuditEntry = {
+  id: number;
+  occurred_at: string;
+  actor_user_id: number | null;
+  actor_label: string;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  result: string;
+  reason: string;
+  ip: string;
+  request_id: string;
+  before: unknown;
+  after: unknown;
+};
+
+export type AuditList = { items: AuditEntry[]; next_cursor: string };
+
+export type TaxRate = { id: number; code: string; name: string; rate_bp: number; treatment: "standard" | "zero_rated" | "exempt"; active: boolean };
+
+export type SettingsMap = Record<string, unknown>;
