@@ -47,7 +47,7 @@ Two things to know:
 4. Whether the Vercel rewrite forwards cookies and long requests correctly has not been tested on a real deployment yet; it is checked during Stages 6 and 8.
 
 ## Commands
-`npm run dev` · `npm run build` · `npm run lint` · `npm run typecheck` · `npm run check:brand` (logo sizes match the supplied SVG viewBoxes) · `npm run brand:icons` (re-render PNG icons from the favicon SVG).
+`npm run dev` · `npm run build` (needs `BACKEND_URL` in `.env.local`, because a production build refuses to run without it) · `npm run lint` · `npm run typecheck` · `npm run check:brand` (logo sizes match the supplied SVG viewBoxes) · `npm run brand:icons` (re-render PNG icons from the favicon SVG).
 
 ## Brand
 Supplied artwork is in `public/brand/` and is used only through `components/Logo.tsx`; never redraw or recolour it. Colour tokens are in `app/globals.css`; contrast checks are in `docs/design-tokens.md`.
