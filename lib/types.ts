@@ -16,3 +16,19 @@ export type LoginResult = {
   must_change_password: boolean;
   expires_at: string;
 };
+
+export type UserView = {
+  id: number;
+  username: string;
+  display_name: string;
+  status: "active" | "inactive";
+  must_change_password: boolean;
+  last_login_at: string | null;
+  created_at: string;
+  deactivated_at: string | null;
+  roles: string[];
+};
+
+export type UserList = { items: UserView[]; next_cursor: string };
+
+export type AssignableRole = { code: string; name: string; description: string };

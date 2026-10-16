@@ -2,7 +2,7 @@
 
 Next.js web app for Zuscar. This repository is **independent**: it deploys to Vercel on its own. The Go API lives in the separate `zuscar-backend` repository (Docker locally, Render in production). Project documents are in the backend repository's `docs/`; this repo keeps only `docs/design-tokens.md`.
 
-**Status: Stage 8, part a (foundation).** Sign-in, forced password change, the app shell with permission-aware navigation, the connection indicator, the password re-entry prompt and the dashboard. The users, roles, audit-log and settings screens arrive in the next patches of Stage 8; the POS screens come in later stages.
+**Status: Stage 8, part b (users).** Sign-in, forced password change, the app shell with permission-aware navigation, the connection indicator, the password re-entry prompt, the dashboard and the Users screen (search, add, edit, roles, password reset, PIN, deactivate, reactivate, delete). The roles, audit-log and settings screens arrive in the last patch of Stage 8; the POS screens come in later stages.
 
 ## How the app is organised
 - `lib/api.ts`: the only code that calls the backend. Same-origin `/api/v1`, CSRF header on state-changing calls, one `ApiError` shape (code, message, field messages, request id), `newIdempotencyKey()` for calls that must not be applied twice.

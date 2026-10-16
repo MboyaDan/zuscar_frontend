@@ -1,4 +1,4 @@
-import { LayoutDashboard, type LucideIcon } from "lucide-react";
+import { LayoutDashboard, Users, type LucideIcon } from "lucide-react";
 
 export type NavItem = {
   href: string;
@@ -12,4 +12,5 @@ export type NavItem = {
 // Each stage adds its screens here. A screen appears only when its page exists.
 export const NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, description: "Your account and what you can do." },
+  { href: "/users", label: "Users", icon: Users, permission: "users.update", description: "Add people, set their roles, reset passwords and deactivate accounts." },
 ];
