@@ -199,6 +199,8 @@ export type SaleItem = {
   discount_reason?: string;
   tax_cents: number;
   line_total_cents: number;
+  /** How many of this line have been taken back by refunds (Stage 15). */
+  refunded_qty: number;
 };
 
 export type SaleRow = {
@@ -222,7 +224,41 @@ export type SaleRow = {
   created_at: string;
 };
 
-export type Sale = SaleRow & { items: SaleItem[]; payments: SalePayment[] };
+export type RefundPayout = { method: PaymentMethod; amount_cents: number; reference?: string; shift_id: number | null };
+
+export type RefundRecord = {
+  id: number;
+  refund_no: number;
+  kind: "refund" | "void";
+  reason: string;
+  approved_by_name: string;
+  created_by_name: string;
+  business_date: string;
+  amount_cents: number;
+  tax_cents: number;
+  created_at: string;
+  items: { sale_item_id: number; name: string; qty: number; amount_cents: number; tax_cents: number }[];
+  payouts: RefundPayout[];
+};
+
+export type Sale = SaleRow & {
+  items: SaleItem[];
+  payments: SalePayment[];
+  /** Money handed back so far, refunds and voids together. */
+  refunded_cents: number;
+  refunds: RefundRecord[];
+  /** Finalised, no refund yet, and still the day it was made (S-18). Set by the server when a sale is read on its own. */
+  voidable: boolean;
+};
+
+/** What taking the chosen lines back comes to, worked out by the server so the screen never does the sums. */
+export type RefundQuote = {
+  amount_cents: number;
+  tax_cents: number;
+  lines: { sale_item_id: number; name: string; qty: number; amount_cents: number; tax_cents: number }[];
+  /** Per method: confirmed money received that way, less what was already returned. */
+  methods: { method: PaymentMethod; returnable_cents: number }[];
+};
 
 // ---- Shifts and the payments queue (Stage 13b-2) ----
 
@@ -257,7 +293,7 @@ export type ShiftSummary = {
     expenses_cents: number;
     expected_cash_cents: number;
   };
-  sales: { count: number; total_cents: number };
+  sales: { count: number; total_cents: number; voided?: number };
   payments: PaymentTotal[];
   pending_not_cash: PaymentTotal[];
   movements: CashMovement[];
