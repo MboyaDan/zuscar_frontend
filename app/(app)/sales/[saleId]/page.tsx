@@ -116,18 +116,25 @@ export default function SalePage() {
         <h1 className="text-2xl font-semibold">Receipt {sale.receipt_no}</h1>
         <span className="rounded-full border border-stone-brand px-2 text-sm">{SALE_PAYMENT_LABEL[sale.payment_status]}</span>
         {sale.status !== "finalised" && <span className="rounded-full border border-ember px-2 text-sm text-ember">{SALE_STATUS_LABEL[sale.status]}</span>}
-        {sale.status !== "voided" && <Button variant="secondary" onClick={() => setPrinting(true)}><Printer aria-hidden className="size-4" /> Print receipt</Button>}
+        {sale.status !== "voided" && sale.source !== "outage_reconciliation" && <Button variant="secondary" onClick={() => setPrinting(true)}><Printer aria-hidden className="size-4" /> Print receipt</Button>}
         {canRefund && <Button variant="secondary" onClick={() => setCorrecting("refund")}><Undo2 aria-hidden className="size-4" /> Refund</Button>}
         {canVoid && <Button variant="secondary" onClick={() => setCorrecting("void")}><Ban aria-hidden className="size-4" /> Void sale</Button>}
       </div>
       {notice && <Alert tone={notice.tone}>{notice.text}</Alert>}
       {voidRecord && <Alert tone="error">Voided by {voidRecord.created_by_name} on {formatWhen(voidRecord.created_at)}: {voidRecord.reason}. The receipt number {sale.receipt_no} stays in the book.</Alert>}
+      {sale.manual_receipt && (
+        <Alert tone="info">
+          Entered from paper receipt <strong>{sale.manual_receipt.manual_receipt_no}</strong>, written {formatWhen(sale.manual_receipt.occurred_at)} and entered by {sale.manual_receipt.entered_by_name}.
+          {sale.manual_receipt.paper_total_cents !== sale.total_cents && <> The paper total was {formatKes(sale.manual_receipt.paper_total_cents)}{sale.manual_receipt.discrepancy_note ? `: ${sale.manual_receipt.discrepancy_note}` : ""}.</>}
+          {" "}No receipt is printed for it: the customer already has the paper one.
+        </Alert>
+      )}
       {sale.tax_status === "provisional_unverified" && <Alert tone="info">Provisional receipt: the tax setup was not verified when this was sold.</Alert>}
 
       <div className="grid gap-4 lg:grid-cols-[1fr_26rem]">
         <section aria-labelledby="items-h" className="space-y-3 rounded-lg border border-stone-brand bg-white p-4">
           <h2 id="items-h" className="text-lg font-semibold">Items</h2>
-          <p className="text-sm text-slate-brand/80">Order {sale.order_no ?? "-"} · {sale.business_date} · taken by {sale.cashier_name}</p>
+          <p className="text-sm text-slate-brand/80">{sale.source === "outage_reconciliation" ? "Paper receipt" : `Order ${sale.order_no ?? "-"}`} · {sale.business_date} · taken by {sale.cashier_name}</p>
           <ul className="divide-y divide-stone-brand">
             {sale.items.map((i) => (
               <li key={i.id} className="flex items-start justify-between gap-3 py-2">

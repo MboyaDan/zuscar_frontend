@@ -218,6 +218,8 @@ export type SaleRow = {
   balance_cents: number;
   status: "finalised" | "partially_refunded" | "refunded" | "voided";
   payment_status: "unpaid" | "partially_paid" | "paid" | "charged_to_folio";
+  /** pos: made on this system. outage_reconciliation: entered afterwards from a paper receipt (Stage 16). */
+  source?: "pos" | "outage_reconciliation";
   cashier_name: string;
   shift_id?: number | null;
   tax_status?: "provisional_unverified" | "verified";
@@ -241,7 +243,36 @@ export type RefundRecord = {
   payouts: RefundPayout[];
 };
 
+/** The paper receipt behind an outage entry. */
+export type ManualReceipt = {
+  manual_receipt_no: string;
+  occurred_at: string;
+  paper_total_cents: number;
+  discrepancy_note?: string;
+  source_note?: string;
+  entered_by: number;
+  entered_by_name: string;
+};
+
+/** One row of the list of paper receipts entered after an outage. */
+export type ManualReceiptEntry = {
+  id: number;
+  manual_receipt_no: string;
+  sale_id: number;
+  receipt_no: number;
+  occurred_at: string;
+  paper_total_cents: number;
+  sale_total_cents: number;
+  sale_status: SaleRow["status"];
+  entered_by_name: string;
+  discrepancy_note?: string;
+  source_note?: string;
+  entered_at: string;
+};
+
 export type Sale = SaleRow & {
+  /** Set only for a sale entered from a paper receipt. */
+  manual_receipt?: ManualReceipt | null;
   items: SaleItem[];
   payments: SalePayment[];
   /** Money handed back so far, refunds and voids together. */
