@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ChefHat, Minus, Plus, Search, Trash2, X } from "lucide-react";
+import { ArrowLeft, Banknote, ChefHat, Minus, Plus, Search, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -234,6 +234,11 @@ export default function OrderPage() {
           <p className="text-xs text-slate-brand/70">Prices include tax. The payment screen shows the final bill.</p>
           {editable && (
             <div className="flex flex-wrap gap-2">
+              {can("sales.create") && active.length > 0 && (
+                <Link href={`/pos/${id}/pay`} className="target inline-flex w-full items-center justify-center gap-2 rounded-md bg-midnight px-4 py-2 font-medium text-cream hover:bg-midnight/90">
+                  <Banknote aria-hidden className="size-5" /> Take payment · {formatKes(order.subtotal_cents)}
+                </Link>
+              )}
               <Button onClick={() => void send()} busy={sending} disabled={unsent.length === 0} className="flex-1">
                 <ChefHat aria-hidden className="size-5" /> Send to kitchen{unsent.length > 0 ? ` (${unsent.length})` : ""}
               </Button>

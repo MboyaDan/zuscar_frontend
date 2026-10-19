@@ -157,3 +157,69 @@ export type KitchenTicket = {
   updated_at: string;
   lines: { order_item_id: number; name: string; qty: number; change_type: "add" | "cancel" | "modify"; modifiers: string; note: string }[];
 };
+
+// ---- Sales and payments (Stage 13b) ----
+
+export type PaymentMethod = "cash" | "mpesa_manual" | "card_manual" | "bank_manual";
+export type PaymentStatus = "pending_confirmation" | "confirmed" | "failed" | "reversed";
+
+export type BillLine = {
+  order_item_id: number;
+  name: string;
+  qty: number;
+  unit_price_cents: number;
+  modifiers_text: string;
+  modifiers_cents: number;
+  tax_rate_bp: number;
+  tax_cents: number;
+  line_total_cents: number;
+};
+
+export type Bill = { order_id: number; order_no: number; lines: BillLine[]; total_cents: number; tax_cents: number; tax_inclusive: boolean; tax_status: "provisional_unverified" | "verified" };
+
+export type SalePayment = {
+  id: number;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  amount_cents: number;
+  reference?: string;
+  created_by: number;
+  created_at: string;
+  confirmed_at: string | null;
+};
+
+export type SaleItem = {
+  id: number;
+  name: string;
+  qty: number;
+  unit_price_cents: number;
+  modifiers_text: string;
+  modifiers_cents: number;
+  discount_cents: number;
+  discount_reason?: string;
+  tax_cents: number;
+  line_total_cents: number;
+};
+
+export type SaleRow = {
+  id: number;
+  receipt_no: number;
+  order_id: number | null;
+  order_no?: number;
+  business_date: string;
+  subtotal_cents: number;
+  discount_cents: number;
+  tax_cents: number;
+  total_cents: number;
+  paid_cents: number;
+  pending_cents: number;
+  balance_cents: number;
+  status: "finalised" | "partially_refunded" | "refunded" | "voided";
+  payment_status: "unpaid" | "partially_paid" | "paid" | "charged_to_folio";
+  cashier_name: string;
+  shift_id?: number | null;
+  tax_status?: "provisional_unverified" | "verified";
+  created_at: string;
+};
+
+export type Sale = SaleRow & { items: SaleItem[]; payments: SalePayment[] };
