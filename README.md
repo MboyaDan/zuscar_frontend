@@ -2,13 +2,14 @@
 
 Next.js web app for Zuscar. This repository is **independent**: it deploys to Vercel on its own. The Go API lives in the separate `zuscar-backend` repository (Docker locally, Render in production). Project documents are in the backend repository's `docs/`; this repo keeps only `docs/design-tokens.md`.
 
-**Status: Stage 8, part b (users).** Sign-in, forced password change, the app shell with permission-aware navigation, the connection indicator, the password re-entry prompt, the dashboard and the Users screen (search, add, edit, roles, password reset, PIN, deactivate, reactivate, delete). The roles, audit-log and settings screens arrive in the last patch of Stage 8; the POS screens come in later stages.
+**Status: Stage 13, part a (order screen).** Sign-in, forced password change, the app shell with permission-aware navigation, the connection indicator, the password re-entry prompt, the dashboard, the admin screens (users, roles, audit log, settings and tax configuration, catalogue) and, new, **Sell**: the table board and the order screen (add items from the menu, change quantities, cancel a line or the order with a reason, send to the kitchen). The payment screen, shift screens and the kitchen ticket list come in the next patches of Stage 13.
 
 ## How the app is organised
 - `lib/api.ts`: the only code that calls the backend. Same-origin `/api/v1`, CSRF header on state-changing calls, one `ApiError` shape (code, message, field messages, request id), `newIdempotencyKey()` for calls that must not be applied twice.
 - `lib/session.tsx`: who is signed in (`GET /auth/me`) and `can(permission)`. Permissions come from the API on every load; hiding a menu item is a convenience, the API refuses what a user may not do.
 - `lib/reauth.tsx`: `withReauth(() => api(...))` opens the password prompt when the API answers `reauth_required` and retries once.
 - `lib/nav.ts`: the navigation list. A screen is added here when its page exists.
+- `app/(app)/pos/`: the Sell screens. `/pos` is the table board (free and taken tables, open orders, new takeaway order); `/pos/[orderId]` is the order screen. Keyboard: the search box has focus when the order opens, `/` jumps back to it, Enter adds the first match (a product with options opens a small dialog; Enter in its note box adds it), Escape clears the search. Every change sends the order version the screen showed, so if someone else changed the order the screen refreshes instead of overwriting it. "Send to kitchen" keeps one Idempotency-Key per order version, so a double tap or a retry cannot issue two ticket numbers.
 - `app/(app)/`: signed-in screens, behind the gate in `layout.tsx`. `app/login`, `app/change-password` and `app/help/outage` are outside the gate on purpose.
 - `proxy.ts`: sends someone with no session cookie to the sign-in page. Not a security check.
 - `components/ui.tsx`: buttons, fields, alerts, modal, loading, empty and error states. Every error state carries an icon and a word.
