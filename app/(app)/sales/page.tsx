@@ -71,7 +71,7 @@ export default function SalesPage() {
               <tbody>
                 {load.items.map((s) => (
                   <tr key={s.id} className="border-b border-stone-brand last:border-0 hover:bg-stone-brand/30">
-                    <td className="p-3"><Link className="target inline-flex items-center font-semibold underline" href={`/sales/${s.id}`}>{s.receipt_no}</Link></td>
+                    <td className="p-3"><Link className="target inline-flex items-center font-semibold underline" href={`/sales/${s.id}`}>{s.receipt_no}</Link>{s.source === "outage_reconciliation" && <span className="ml-2 rounded-full border border-stone-brand px-2 text-xs">Paper</span>}</td>
                     <td className="p-3">{formatWhen(s.created_at)}</td>
                     <td className="p-3">{s.cashier_name}</td>
                     <td className="p-3">{SALE_PAYMENT_LABEL[s.payment_status]}{s.status !== "finalised" ? ` · ${SALE_STATUS_LABEL[s.status]}` : ""}{s.pending_cents > 0 ? " · awaiting confirmation" : ""}</td>

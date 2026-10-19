@@ -1,4 +1,4 @@
-import { Banknote, ChefHat, Printer, BadgeCheck, ClipboardList, LayoutDashboard, ReceiptText, Receipt, ScrollText, Settings, ShieldCheck, UtensilsCrossed, Users, type LucideIcon } from "lucide-react";
+import { Banknote, ChefHat, FilePenLine, Printer, BadgeCheck, ClipboardList, LayoutDashboard, ReceiptText, Receipt, ScrollText, Settings, ShieldCheck, UtensilsCrossed, Users, type LucideIcon } from "lucide-react";
 
 export type NavItem = {
   href: string;
@@ -16,6 +16,7 @@ export const NAV: NavItem[] = [
   { href: "/kitchen", label: "Kitchen", icon: ChefHat, permission: "kitchen.view", description: "Tickets sent from orders: start, mark ready, mark served." },
   { href: "/print", label: "Printing", icon: Printer, description: "Receipts, tickets and bills you printed: try a failed one again, print a copy, or print a test page." },
   { href: "/sales", label: "Sales", icon: Receipt, permission: "sales.view", description: "Finished sales, what is paid and what is still owed." },
+  { href: "/outage", label: "Outage entries", icon: FilePenLine, permission: "payments.reconcile", description: "Enter paper receipts written while the system was down. Each paper receipt can be entered once." },
   { href: "/shift", label: "My shift", icon: Banknote, permission: "shifts.manage", description: "Open your till shift, record cash in and out, count the drawer and close." },
   { href: "/shifts", label: "Shifts", icon: ClipboardList, permission: "shifts.close", description: "Past and open shifts, with any cash difference, ready to be checked." },
   { href: "/payments", label: "Payments", icon: BadgeCheck, permission: "payments.reconcile", description: "M-Pesa, card and bank payments waiting for you to confirm." },
