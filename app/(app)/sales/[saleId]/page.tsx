@@ -1,10 +1,11 @@
 "use client";
 
-import { ArrowLeft, Check, X } from "lucide-react";
+import { ArrowLeft, Check, Printer, X } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ReasonDialog } from "@/components/pos/OrderDialogs";
+import { PrintDialog } from "@/components/print/PrintDialog";
 import { PaymentFields, type PaymentDraft } from "@/components/sales/PaymentFields";
 import { Alert, Button, EmptyState, ErrorState, LoadingState } from "@/components/ui";
 import { ApiError, api, errorMessage, newIdempotencyKey } from "@/lib/api";
@@ -27,6 +28,7 @@ export default function SalePage() {
   const [draftErr, setDraftErr] = useState<{ amount?: string; reference?: string }>({});
   const [busy, setBusy] = useState<number | "add" | null>(null);
   const [failing, setFailing] = useState<SalePayment | null>(null);
+  const [printing, setPrinting] = useState(false);
   const attempt = useRef<{ payload: string; key: string } | null>(null);
   const allowed = can("sales.view");
 
@@ -107,6 +109,7 @@ export default function SalePage() {
         <h1 className="text-2xl font-semibold">Receipt {sale.receipt_no}</h1>
         <span className="rounded-full border border-stone-brand px-2 text-sm">{SALE_PAYMENT_LABEL[sale.payment_status]}</span>
         {sale.status !== "finalised" && <span className="rounded-full border border-ember px-2 text-sm text-ember">{SALE_STATUS_LABEL[sale.status]}</span>}
+        <Button variant="secondary" onClick={() => setPrinting(true)}><Printer aria-hidden className="size-4" /> Print receipt</Button>
       </div>
       {notice && <Alert tone={notice.tone}>{notice.text}</Alert>}
       {sale.tax_status === "provisional_unverified" && <Alert tone="info">Provisional receipt: the tax setup was not verified when this was sold.</Alert>}
@@ -176,6 +179,7 @@ export default function SalePage() {
         </section>
       </div>
 
+      {printing && <PrintDialog target={{ kind: "new", docType: "receipt", refId: sale.id }} onClose={() => setPrinting(false)} />}
       <ReasonDialog
         open={failing !== null}
         title={failing ? `Payment did not arrive: ${methodLabel(failing.method)} ${formatKes(failing.amount_cents)}` : "Payment did not arrive"}

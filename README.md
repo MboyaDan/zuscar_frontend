@@ -2,7 +2,7 @@
 
 Next.js web app for Zuscar. This repository is **independent**: it deploys to Vercel on its own. The Go API lives in the separate `zuscar-backend` repository (Docker locally, Render in production). Project documents are in the backend repository's `docs/`; this repo keeps only `docs/design-tokens.md`.
 
-**Status: Stage 13 complete (selling screens).** Everything from before (sign-in, shell, admin screens, catalogue, table board, order screen, payment screen, sales, shifts and the payments queue) plus the **Kitchen** board: tickets in three columns (New, Preparing, Ready to serve) with Start, Ready and Served buttons for roles that hold `kitchen.update`. Receipts and printing are Stage 14.
+**Status: Stage 14 complete (selling screens and printing).** Everything from before (sign-in, shell, admin screens, catalogue, table board, order screen, payment screen, sales, shifts and the payments queue) plus the **Kitchen** board: tickets in three columns (New, Preparing, Ready to serve) with Start, Ready and Served buttons for roles that hold `kitchen.update`. **Stage 14 (printing):** receipts, kitchen tickets, pre-payment bills and a test page print on 80 mm paper from the browser. Each print is a saved job: if the paper does not come out you can try again without making a second sale or a second ticket, and a further copy is marked REPRINT · COPY n. The job list is under **Printing**. Printer hardware is checked by the owner with `docs/printer-test-sheet.md` in the backend repo.
 
 ## How the app is organised
 - `lib/api.ts`: the only code that calls the backend. Same-origin `/api/v1`, CSRF header on state-changing calls, one `ApiError` shape (code, message, field messages, request id), `newIdempotencyKey()` for calls that must not be applied twice.

@@ -35,3 +35,42 @@
   /* Large touch and click targets (at least 44 px). */
   .target { min-height: 44px; min-width: 44px; }
 }
+
+/* Print documents (Stage 14): receipts, kitchen tickets, bills and the test page. Strictly black on white, 80 mm paper,
+   about 72 mm printable width, no tints and no hairlines (rules are 2 px dashed). Plain CSS on purpose: nothing here
+   may pick up a theme colour. */
+.print-doc {
+  width: 72mm;
+  margin: 0 auto;
+  padding: 2mm 0;
+  background: #fff;
+  color: #000;
+  font-family: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.print-doc * { color: #000; background: transparent; }
+.print-doc .center { text-align: center; }
+.print-doc .strong { font-weight: 700; }
+.print-doc .small { font-size: 10px; }
+.print-doc .big { font-size: 20px; font-weight: 700; }
+.print-doc .rule { border-top: 2px dashed #000; margin: 6px 0; height: 0; }
+.print-doc .row { display: flex; justify-content: space-between; gap: 8px; }
+.print-doc .row > :last-child { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.print-doc .banner { border: 3px solid #000; text-align: center; font-weight: 700; font-size: 18px; padding: 4px; margin: 6px 0; }
+.print-doc .kitchen-title { border: 4px solid #000; text-align: center; font-weight: 800; font-size: 34px; letter-spacing: 2px; padding: 4px 0; }
+.print-doc .kitchen-line { font-size: 16px; font-weight: 700; margin-top: 6px; }
+.print-doc .cancelled { text-decoration: line-through; }
+.print-doc img { display: block; margin: 0 auto 4px; width: 56mm; height: auto; image-rendering: pixelated; }
+.print-doc .solid { background: #000 !important; height: 10mm; width: 72mm; }
+.print-doc .edge { background: #000 !important; width: 4mm; height: 4mm; }
+.print-doc .ruler { height: 5mm; width: 72mm; background-image: repeating-linear-gradient(to right, #000 0, #000 2px, transparent 2px, transparent 10mm); }
+.print-only { display: none; }
+@media print {
+  @page { size: 80mm auto; margin: 0; }
+  html, body { background: #fff !important; }
+  body > *:not(.print-only) { display: none !important; }
+  .print-only { display: block !important; }
+}

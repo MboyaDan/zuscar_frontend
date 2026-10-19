@@ -1,7 +1,8 @@
 "use client";
 
-import { RefreshCw } from "lucide-react";
+import { Printer, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
+import { PrintDialog } from "@/components/print/PrintDialog";
 import { Alert, Button, EmptyState, ErrorState, LoadingState } from "@/components/ui";
 import { ApiError, api, errorMessage } from "@/lib/api";
 import { useSession } from "@/lib/session";
@@ -30,6 +31,7 @@ export default function KitchenPage() {
   const [now, setNow] = useState(() => Date.now());
   const [busy, setBusy] = useState<number | null>(null);
   const [notice, setNotice] = useState<string>();
+  const [printTicket, setPrintTicket] = useState<number | null>(null);
   const allowed = can("kitchen.view");
   const canUpdate = can("kitchen.update");
 
@@ -79,6 +81,7 @@ export default function KitchenPage() {
         </div>
       </div>
       {notice && <Alert tone="error">{notice}</Alert>}
+      {printTicket !== null && <PrintDialog target={{ kind: "new", docType: "kitchen_ticket", refId: printTicket }} onClose={() => setPrintTicket(null)} />}
       {load.status === "loading" && <LoadingState label="Loading tickets" />}
       {load.status === "error" && <ErrorState message={load.message} onRetry={() => setTick((n) => n + 1)} />}
       {load.status === "ready" && (
@@ -110,6 +113,7 @@ export default function KitchenPage() {
                           ))}
                         </ul>
                         {canUpdate && col.action && <Button onClick={() => void move(t, col.action!.to)} busy={busy === t.id} className="w-full">{col.action.label}</Button>}
+                        <Button variant="secondary" onClick={() => setPrintTicket(t.id)} className="w-full"><Printer aria-hidden className="size-4" /> Print ticket</Button>
                       </li>
                     ))}
                   </ul>

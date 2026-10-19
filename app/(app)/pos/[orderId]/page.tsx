@@ -1,10 +1,11 @@
 "use client";
 
-import { ArrowLeft, Banknote, ChefHat, Minus, Plus, Search, Trash2, X } from "lucide-react";
+import { ArrowLeft, Banknote, ChefHat, Minus, Plus, Printer, Search, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AddItemDialog, ReasonDialog } from "@/components/pos/OrderDialogs";
+import { PrintDialog, type PrintTarget } from "@/components/print/PrintDialog";
 import { Alert, Button, EmptyState, ErrorState, LoadingState } from "@/components/ui";
 import { ApiError, api, errorMessage, newIdempotencyKey } from "@/lib/api";
 import { formatKes } from "@/lib/money";
@@ -26,6 +27,7 @@ export default function OrderPage() {
   const [cancelLine, setCancelLine] = useState<OrderLine | null>(null);
   const [cancelOrder, setCancelOrder] = useState(false);
   const [sending, setSending] = useState(false);
+  const [printing, setPrinting] = useState<PrintTarget | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   // The send key belongs to one order version: the same tap retried reuses it, a changed order gets a new one (NN-05).
   const sendKey = useRef<{ version: number; key: string } | null>(null);
@@ -130,6 +132,8 @@ export default function OrderPage() {
       const res = await change<{ order: Order; ticket: KitchenTicket }>(`/orders/${id}/send-to-kitchen`, "POST", {}, { idempotencyKey: sendKey.current.key });
       sendKey.current = null;
       setNotice({ tone: "success", text: `Sent to the kitchen as ticket ${res.ticket.ticket_no}${res.ticket.kind === "update" ? " (update)" : ""}.` });
+      // The ticket is saved before this point; printing it is a separate step that can fail without losing it (AC-03, AC-04).
+      if (can("kitchen.view")) setPrinting({ kind: "new", docType: "kitchen_ticket", refId: res.ticket.id });
     } catch (err) {
       if (!(err instanceof ApiError && err.code === "order_changed")) setNotice({ tone: "error", text: errorMessage(err) });
     } finally {
@@ -245,9 +249,13 @@ export default function OrderPage() {
               <Button variant="secondary" onClick={() => setCancelOrder(true)}><X aria-hidden className="size-4" /> Cancel order</Button>
             </div>
           )}
+          {can("sales.create") && active.length > 0 && (
+            <Button variant="secondary" onClick={() => setPrinting({ kind: "new", docType: "bill", refId: id })} className="w-full"><Printer aria-hidden className="size-4" /> Print bill</Button>
+          )}
         </section>
       </div>
 
+      {printing && <PrintDialog key={JSON.stringify(printing)} target={printing} onClose={() => setPrinting(null)} />}
       <AddItemDialog
         key={adding?.id ?? "none"}
         product={adding}
