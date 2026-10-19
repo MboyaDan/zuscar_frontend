@@ -223,3 +223,55 @@ export type SaleRow = {
 };
 
 export type Sale = SaleRow & { items: SaleItem[]; payments: SalePayment[] };
+
+// ---- Shifts and the payments queue (Stage 13b-2) ----
+
+export type Shift = {
+  id: number;
+  user_id: number;
+  user_name: string;
+  status: "open" | "closed" | "reconciled";
+  opened_at: string;
+  opening_float_cents: number;
+  closed_at: string | null;
+  declared_cash_cents: number | null;
+  expected_cash_cents: number | null;
+  /** declared minus expected: negative is cash short, positive is cash over. */
+  variance_cents: number | null;
+  reconciled_at: string | null;
+  notes?: string;
+};
+
+export type CashMovement = { id: number; kind: "paid_in" | "paid_out" | "expense"; amount_cents: number; reason: string; created_by_name: string; created_at: string };
+
+export type PaymentTotal = { method: PaymentMethod; status: PaymentStatus; payments: number; amount_cents: number };
+
+export type ShiftSummary = {
+  shift: Shift;
+  cash: {
+    opening_float_cents: number;
+    cash_payments_cents: number;
+    cash_refunds_cents: number;
+    paid_in_cents: number;
+    paid_out_cents: number;
+    expenses_cents: number;
+    expected_cash_cents: number;
+  };
+  sales: { count: number; total_cents: number };
+  payments: PaymentTotal[];
+  pending_not_cash: PaymentTotal[];
+  movements: CashMovement[];
+};
+
+export type PaymentRecord = {
+  id: number;
+  sale_id: number | null;
+  receipt_no?: number;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  amount_cents: number;
+  reference?: string;
+  created_by_name: string;
+  created_at: string;
+  shift_id: number | null;
+};
