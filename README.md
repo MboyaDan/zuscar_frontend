@@ -2,7 +2,7 @@
 
 Next.js web app for Zuscar. This repository is **independent**: it deploys to Vercel on its own. The Go API lives in the separate `zuscar-backend` repository (Docker locally, Render in production). Project documents are in the backend repository's `docs/`; this repo keeps only `docs/design-tokens.md`.
 
-**Status: Stage 13, part b-2 (shifts and the payments queue).** Everything from before (sign-in, shell, admin screens, catalogue, table board, order screen, payment screen, sales) plus: **My shift** (open with a float, running expected cash, cash in, cash out and expenses, close with the counted cash and the difference shown), **Shifts** (the list for managers, a shift's cash-up, and marking a closed shift as checked) and **Payments** (the queue of M-Pesa, card and bank payments waiting for a reconciler to confirm or mark as failed). The kitchen ticket list comes in the last patch of Stage 13.
+**Status: Stage 13 complete (selling screens).** Everything from before (sign-in, shell, admin screens, catalogue, table board, order screen, payment screen, sales, shifts and the payments queue) plus the **Kitchen** board: tickets in three columns (New, Preparing, Ready to serve) with Start, Ready and Served buttons for roles that hold `kitchen.update`. Receipts and printing are Stage 14.
 
 ## How the app is organised
 - `lib/api.ts`: the only code that calls the backend. Same-origin `/api/v1`, CSRF header on state-changing calls, one `ApiError` shape (code, message, field messages, request id), `newIdempotencyKey()` for calls that must not be applied twice.
@@ -54,3 +54,4 @@ Two things to know:
 ## Brand
 Supplied artwork is in `public/brand/` and is used only through `components/Logo.tsx`; never redraw or recolour it. Colour tokens are in `app/globals.css`; contrast checks are in `docs/design-tokens.md`.
 - `app/(app)/shift`, `app/(app)/shifts` and `app/(app)/payments`: the till shift screens and the payments queue. The expected cash is always the API's figure; the browser only compares the typed count with it. Open, cash movement, close and reconcile each send one Idempotency-Key per exact request body. Pending non-cash money is shown apart from cash.
+- `app/(app)/kitchen`: the kitchen board. It reads `GET /kitchen/tickets` (open tickets, oldest first) and refreshes itself every 10 seconds while the tab is visible, because the API has no push channel yet. Tickets only move forward; if someone else already moved one, the board says so and refreshes. Update tickets (changes to an order already sent) carry a badge, and cancelled lines are struck through and marked CANCEL. Ticket status never depends on payment.

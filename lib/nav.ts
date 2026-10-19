@@ -1,4 +1,4 @@
-import { Banknote, BadgeCheck, ClipboardList, LayoutDashboard, ReceiptText, Receipt, ScrollText, Settings, ShieldCheck, UtensilsCrossed, Users, type LucideIcon } from "lucide-react";
+import { Banknote, ChefHat, BadgeCheck, ClipboardList, LayoutDashboard, ReceiptText, Receipt, ScrollText, Settings, ShieldCheck, UtensilsCrossed, Users, type LucideIcon } from "lucide-react";
 
 export type NavItem = {
   href: string;
@@ -13,6 +13,7 @@ export type NavItem = {
 export const NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, description: "Your account and what you can do." },
   { href: "/pos", label: "Sell", icon: ReceiptText, permission: "orders.manage", description: "Tables and orders: add items, send to the kitchen." },
+  { href: "/kitchen", label: "Kitchen", icon: ChefHat, permission: "kitchen.view", description: "Tickets sent from orders: start, mark ready, mark served." },
   { href: "/sales", label: "Sales", icon: Receipt, permission: "sales.view", description: "Finished sales, what is paid and what is still owed." },
   { href: "/shift", label: "My shift", icon: Banknote, permission: "shifts.manage", description: "Open your till shift, record cash in and out, count the drawer and close." },
   { href: "/shifts", label: "Shifts", icon: ClipboardList, permission: "shifts.close", description: "Past and open shifts, with any cash difference, ready to be checked." },
