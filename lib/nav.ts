@@ -1,4 +1,4 @@
-import { LayoutDashboard, ScrollText, Settings, ShieldCheck, UtensilsCrossed, Users, type LucideIcon } from "lucide-react";
+import { LayoutDashboard, ReceiptText, ScrollText, Settings, ShieldCheck, UtensilsCrossed, Users, type LucideIcon } from "lucide-react";
 
 export type NavItem = {
   href: string;
@@ -12,6 +12,7 @@ export type NavItem = {
 // Each stage adds its screens here. A screen appears only when its page exists.
 export const NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, description: "Your account and what you can do." },
+  { href: "/pos", label: "Sell", icon: ReceiptText, permission: "orders.manage", description: "Tables and orders: add items, send to the kitchen." },
   { href: "/users", label: "Users", icon: Users, permission: "users.update", description: "Add people, set their roles, reset passwords and deactivate accounts." },
   { href: "/catalogue", label: "Catalogue", icon: UtensilsCrossed, permission: "catalogue.manage", description: "Categories, products, prices, availability and modifiers." },
   { href: "/roles", label: "Roles", icon: ShieldCheck, permission: "roles.manage", description: "Create roles and choose what each role is allowed to do." },

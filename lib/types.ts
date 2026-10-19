@@ -95,3 +95,65 @@ export type Product = {
 export type PriceHistoryItem = { price_cents: number; effective_from: string; changed_by: number | null };
 
 export type CatalogueData = { categories: Category[]; modifiers: Modifier[]; rates: TaxRate[]; products: Product[] };
+
+// ---- Orders and the POS (Stage 13) ----
+
+export type DiningTable = { id: number; label: string; seats: number; active: boolean; open_order_id: number | null };
+
+export type OrderStatus = "open" | "sent" | "finalised" | "cancelled";
+
+export type OrderSummary = {
+  id: number;
+  order_no: number;
+  order_type: "dine_in" | "takeaway";
+  table_id: number | null;
+  table_label: string;
+  status: OrderStatus;
+  opened_by: number;
+  opened_by_name: string;
+  note: string;
+  version: number;
+  cancel_reason: string;
+  subtotal_cents: number;
+  item_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type OrderLine = {
+  id: number;
+  product_id: number;
+  name: string;
+  kitchen_routed: boolean;
+  qty: number;
+  unit_price_cents: number;
+  line_total_cents: number;
+  status: "active" | "cancelled";
+  note: string;
+  cancel_reason: string;
+  sent_to_kitchen: boolean;
+  modifiers: { id: number; name: string; price_delta_cents: number }[];
+};
+
+export type Order = OrderSummary & { items: OrderLine[] };
+
+export type MenuModifier = { id: number; name: string; price_delta_cents: number };
+export type MenuProduct = { id: number; name: string; price_cents: number; kitchen_routed: boolean; modifiers: MenuModifier[] };
+export type MenuCategory = { id: number; module: Module; name: string; sort_order: number; products: MenuProduct[] };
+
+export type KitchenTicket = {
+  id: number;
+  order_id: number;
+  order_no: number;
+  order_type: "dine_in" | "takeaway";
+  table_label: string;
+  business_date: string;
+  ticket_no: number;
+  kind: "original" | "update";
+  parent_ticket_id: number | null;
+  status: "submitted" | "preparing" | "ready" | "served" | "cancelled";
+  created_by_name: string;
+  created_at: string;
+  updated_at: string;
+  lines: { order_item_id: number; name: string; qty: number; change_type: "add" | "cancel" | "modify"; modifiers: string; note: string }[];
+};
