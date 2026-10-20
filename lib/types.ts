@@ -88,6 +88,9 @@ export type Product = {
   is_available: boolean;
   kitchen_routed: boolean;
   modifier_ids: number[];
+  /** Stock link: each unit sold takes stock_units_per_sale base units of this item. null = the product does not track stock. */
+  inventory_item_id: number | null;
+  stock_units_per_sale: number;
   created_at: string;
   updated_at: string;
 };
@@ -341,4 +344,47 @@ export type PaymentRecord = {
   created_by_name: string;
   created_at: string;
   shift_id: number | null;
+};
+
+// ---- Inventory (Stage 17) ----
+
+export type StockUnit = { id: number; code: string; name: string };
+export type StockLocation = { id: number; code: string; name: string; active: boolean };
+export type StockConversion = { from_unit_id: number; from_unit_code: string; from_unit_name: string; factor_num: number; factor_den: number };
+export type StockBalance = { location_id: number; location_code: string; location_name: string; qty_base: number };
+export type InventoryItem = {
+  id: number;
+  name: string;
+  sku?: string;
+  base_unit: StockUnit;
+  low_stock_threshold: number | null;
+  active: boolean;
+  total_base: number;
+  low: boolean;
+  conversions: StockConversion[];
+  balances: StockBalance[];
+};
+export type MovementType =
+  | "opening_balance" | "receipt" | "transfer_out" | "transfer_in" | "sale_consumption" | "sale_return"
+  | "recipe_consumption" | "wastage" | "breakage" | "complimentary" | "count_adjustment" | "adjustment" | "reversal";
+export type StockMovement = {
+  id: number;
+  item_id: number;
+  item_name: string;
+  base_unit_code: string;
+  location_id: number;
+  location_name: string;
+  qty_delta: number;
+  movement_type: MovementType;
+  reason?: string;
+  entered_qty: number | null;
+  entered_unit_code?: string;
+  ref_type?: string;
+  ref_id: number | null;
+  reverses_movement_id: number | null;
+  reversed: boolean;
+  override_reason?: string;
+  created_by: number;
+  created_by_name: string;
+  created_at: string;
 };

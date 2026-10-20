@@ -7,7 +7,8 @@ import { Alert, TextField } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 import { formatWhen } from "@/lib/format";
 import { centsToInput, formatKes, parseKes } from "@/lib/money";
-import type { CatalogueData, Category, Modifier, Module, PriceHistoryItem, Product, TaxRate } from "@/lib/types";
+import { useSession } from "@/lib/session";
+import type { CatalogueData, Category, InventoryItem, Modifier, Module, PriceHistoryItem, Product, TaxRate } from "@/lib/types";
 
 type Common = { onClose: () => void; onDone: (message: string) => void };
 
@@ -118,10 +119,28 @@ export function ProductDialog({ product, data, onClose, onDone }: Common & { pro
   const [mods, setMods] = useState<number[]>(product?.modifier_ids ?? []);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const { can } = useSession();
+  const [stockItem, setStockItem] = useState(product?.inventory_item_id ? String(product.inventory_item_id) : "");
+  const [perSale, setPerSale] = useState(String(product?.stock_units_per_sale ?? 1));
+  const [stockItems, setStockItems] = useState<InventoryItem[]>([]);
+  const canSeeStock = can("inventory.view");
+  useEffect(() => {
+    if (!canSeeStock) return;
+    let alive = true;
+    api<{ items: InventoryItem[] }>("/inventory/items")
+      .then((r) => alive && setStockItems(r.items))
+      .catch(() => alive && setStockItems([]));
+    return () => {
+      alive = false;
+    };
+  }, [canSeeStock]);
+  const per = Number(perSale);
+  const perOk = Number.isInteger(per) && per >= 1 && per <= 1000000;
+  const chosen = stockItems.find((i) => String(i.id) === stockItem);
   const cents = parseKes(price);
   const categories = data.categories.filter((c) => (c.active || c.id === product?.category_id) && (!product || c.module === product.module));
   const rates = data.rates.filter((r) => r.active || r.id === product?.tax_rate.id);
-  const ready = name.trim() && categoryId && taxId && kitchen && (product || cents !== null);
+  const ready = name.trim() && categoryId && taxId && kitchen && (product || cents !== null) && (!stockItem || perOk);
 
   return (
     <FormDialog
@@ -133,8 +152,12 @@ export function ProductDialog({ product, data, onClose, onDone }: Common & { pro
       disabled={!ready}
       onSubmit={async () => {
         const common = { category_id: Number(categoryId), name: name.trim(), sku: sku.trim(), tax_rate_id: Number(taxId), kitchen_routed: kitchen === "yes", modifier_ids: mods };
-        if (product) await api(`/products/${product.id}`, { method: "PATCH", body: common });
-        else await api("/products", { method: "POST", body: { ...common, price_cents: cents } });
+        // Only people who can see stock may change the link; for everyone else it is left as it was.
+        const stock = canSeeStock && (stockItems.length > 0 || stockItem === "")
+          ? { inventory_item_id: stockItem ? Number(stockItem) : null, stock_units_per_sale: stockItem ? per : 1 }
+          : {};
+        if (product) await api(`/products/${product.id}`, { method: "PATCH", body: { ...common, ...stock } });
+        else await api("/products", { method: "POST", body: { ...common, ...stock, price_cents: cents } });
         onDone(product ? `${name.trim()} was saved.` : `${name.trim()} was added.`);
       }}
     >
@@ -161,6 +184,18 @@ export function ProductDialog({ product, data, onClose, onDone }: Common & { pro
       </SelectField>
       {!product && (
         <TextField label="Price (KES)" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} error={errors.price_cents ?? (price && cents === null ? "Enter an amount such as 850 or 850.50." : undefined)} required />
+      )}
+      {canSeeStock && (
+        <fieldset className="space-y-2 rounded-md border border-stone-brand p-3">
+          <legend className="px-1 text-sm font-medium">Stock</legend>
+          <SelectField label="Takes stock from" value={stockItem} onChange={(e) => setStockItem(e.target.value)} error={errors.inventory_item_id} hint="Each one sold takes stock from this item. Bar products come out of the Bar, the rest out of the Kitchen.">
+            <option value="">Does not track stock</option>
+            {stockItems.map((i) => <option key={i.id} value={i.id}>{i.name} ({i.base_unit.code}){i.active ? "" : " (switched off)"}</option>)}
+          </SelectField>
+          {stockItem && (
+            <TextField label={`Taken for each one sold${chosen ? ` (${chosen.base_unit.code})` : ""}`} inputMode="numeric" value={perSale} onChange={(e) => setPerSale(e.target.value)} error={errors.stock_units_per_sale ?? (perOk ? undefined : "Enter a whole number from 1 up.")} hint="For example 1 for a bottle of beer, or 25 for a tot counted in millilitres." />
+          )}
+        </fieldset>
       )}
       <TextField label="SKU (optional)" value={sku} onChange={(e) => setSku(e.target.value)} error={errors.sku} hint="Letters, digits, dot, dash or underscore. Must be unique." />
       {data.modifiers.length > 0 && (
