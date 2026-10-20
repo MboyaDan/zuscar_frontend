@@ -388,3 +388,35 @@ export type StockMovement = {
   created_by_name: string;
   created_at: string;
 };
+
+// ---- Purchasing (Stage 19) ----
+
+export type Supplier = { id: number; name: string; contact: string; active: boolean };
+export type PurchaseStatus = "draft" | "received" | "cancelled";
+export type PurchaseLine = {
+  item_id: number;
+  item_name: string;
+  base_unit_code: string;
+  entered_qty: number;
+  entered_unit_id: number;
+  entered_unit_code: string;
+  qty_base: number;
+  unit_cost_cents: number;
+  line_cents: number;
+};
+export type Purchase = {
+  id: number;
+  purchase_no: number;
+  supplier_id: number;
+  supplier_name: string;
+  status: PurchaseStatus;
+  invoice_ref?: string;
+  note?: string;
+  location_id: number | null;
+  location_name?: string;
+  created_at: string;
+  received_at: string | null;
+  line_count: number;
+  total_cents: number;
+  lines?: PurchaseLine[];
+};
