@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { AdjustDialog, ConversionsDialog, ItemDialog, NameCodeDialog, OpeningDialog, ReverseDialog } from "@/components/inventory/InventoryDialogs";
+import { AdjustDialog, ConversionsDialog, ItemDialog, NameCodeDialog, OpeningDialog, ReverseDialog, TransferDialog, WastageDialog } from "@/components/inventory/InventoryDialogs";
 import { Alert, Button, EmptyState, ErrorState, LoadingState } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 import { formatWhen } from "@/lib/format";
@@ -20,6 +20,8 @@ type Dialog =
   | { kind: "conversions"; item: InventoryItem }
   | { kind: "opening"; item: InventoryItem }
   | { kind: "adjust"; item: InventoryItem }
+  | { kind: "transfer"; item: InventoryItem }
+  | { kind: "wastage"; item: InventoryItem }
   | { kind: "reverse"; movement: StockMovement }
   | { kind: "unit" }
   | { kind: "location" };
@@ -35,6 +37,8 @@ export default function InventoryPage() {
   const allowed = can("inventory.view");
   const manage = can("inventory.adjust");
   const override = can("inventory.override_negative");
+  const transfer = can("inventory.transfer");
+  const wastage = can("inventory.wastage");
 
   useEffect(() => {
     if (!allowed) return;
@@ -120,8 +124,14 @@ export default function InventoryPage() {
                   {i.conversions.length > 0 && (
                     <p className="mt-1 text-sm text-slate-brand/80">Units: {i.conversions.map((c) => `1 ${c.from_unit_name.toLowerCase()} = ${c.factor_num}${c.factor_den !== 1 ? `/${c.factor_den}` : ""} ${i.base_unit.code}`).join(", ")}</p>
                   )}
-                  {manage && (
+                  {(manage || transfer || wastage) && (
                     <div className="mt-3 flex flex-wrap gap-2">
+                      {transfer && <Button variant="secondary" disabled={!i.active} onClick={() => setDialog({ kind: "transfer", item: i })}>Move</Button>}
+                      {wastage && <Button variant="secondary" disabled={!i.active} onClick={() => setDialog({ kind: "wastage", item: i })}>Wastage</Button>}
+                    </div>
+                  )}
+                  {manage && (
+                    <div className="mt-2 flex flex-wrap gap-2">
                       <Button variant="secondary" onClick={() => setDialog({ kind: "opening", item: i })}>Opening stock</Button>
                       <Button variant="secondary" disabled={!i.active} onClick={() => setDialog({ kind: "adjust", item: i })}>Adjust</Button>
                       <Button variant="secondary" onClick={() => setDialog({ kind: "conversions", item: i })}>Units</Button>
@@ -143,6 +153,8 @@ export default function InventoryPage() {
       {load.status === "ready" && dialog?.kind === "conversions" && <ConversionsDialog item={dialog.item} units={load.units} onClose={() => setDialog(undefined)} onDone={done} />}
       {load.status === "ready" && dialog?.kind === "opening" && <OpeningDialog item={dialog.item} locations={load.locations} onClose={() => setDialog(undefined)} onDone={done} />}
       {load.status === "ready" && dialog?.kind === "adjust" && <AdjustDialog item={dialog.item} locations={load.locations} canOverride={override} onClose={() => setDialog(undefined)} onDone={done} />}
+      {load.status === "ready" && dialog?.kind === "transfer" && <TransferDialog item={dialog.item} locations={load.locations} canOverride={override} onClose={() => setDialog(undefined)} onDone={done} />}
+      {load.status === "ready" && dialog?.kind === "wastage" && <WastageDialog item={dialog.item} locations={load.locations} canOverride={override} onClose={() => setDialog(undefined)} onDone={done} />}
       {dialog?.kind === "reverse" && <ReverseDialog movement={dialog.movement} canOverride={override} onClose={() => setDialog(undefined)} onDone={done} />}
       {(dialog?.kind === "unit" || dialog?.kind === "location") && <NameCodeDialog kind={dialog.kind} onClose={() => setDialog(undefined)} onDone={done} />}
     </div>
