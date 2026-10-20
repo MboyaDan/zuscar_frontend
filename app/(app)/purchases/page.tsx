@@ -124,7 +124,10 @@ export default function PurchasesPage() {
                         {p.invoice_ref ? ` · invoice ${p.invoice_ref}` : ""}
                       </p>
                     </div>
-                    <p className="money text-xl font-semibold">{formatKes(p.total_cents)}</p>
+                    <div className="text-right">
+                      <p className="money text-xl font-semibold">{formatKes(p.total_cents)}</p>
+                      {p.status === "received" && p.ordered_cents !== p.total_cents && <p className="text-sm text-ember">Ordered {formatKes(p.ordered_cents)}</p>}
+                    </div>
                   </div>
                   {p.note && <p className="mt-1 text-sm">{p.note}</p>}
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -137,12 +140,13 @@ export default function PurchasesPage() {
                       {detail?.id !== p.id ? (
                         <LoadingState label="Loading items" />
                       ) : (
-                        <table className="w-full min-w-[28rem] text-left text-sm">
+                        <table className="w-full min-w-[34rem] text-left text-sm">
                           <caption className="sr-only">Items on delivery #{p.purchase_no}</caption>
                           <thead>
                             <tr className="border-b border-stone-brand">
                               <th scope="col" className="py-1 pr-3 font-medium">Item</th>
-                              <th scope="col" className="py-1 pr-3 font-medium">Quantity</th>
+                              <th scope="col" className="py-1 pr-3 font-medium">Ordered</th>
+                              <th scope="col" className="py-1 pr-3 font-medium">Arrived</th>
                               <th scope="col" className="py-1 pr-3 text-right font-medium">One unit</th>
                               <th scope="col" className="py-1 text-right font-medium">Line total</th>
                             </tr>
@@ -150,9 +154,10 @@ export default function PurchasesPage() {
                           <tbody>
                             {detail.lines?.map((l) => (
                               <tr key={l.item_id} className="border-b border-stone-brand/60">
-                                <td className="py-1 pr-3">{l.item_name}</td>
+                                <td className="py-1 pr-3">{l.item_name}{l.receipt_reversed && <span className="block text-ember">Receipt reversed</span>}</td>
                                 <td className="py-1 pr-3">{l.entered_qty.toLocaleString("en-KE")} {l.entered_unit_code}{l.entered_unit_code !== l.base_unit_code ? ` (${qtyText(l.qty_base, l.base_unit_code)})` : ""}</td>
-                                <td className="money py-1 pr-3 text-right">{formatKes(l.unit_cost_cents)}</td>
+                                <td className="py-1 pr-3">{l.received_qty === null ? "Not yet" : l.received_qty === 0 ? "Did not arrive" : `${l.received_qty.toLocaleString("en-KE")} ${l.entered_unit_code}`}</td>
+                                <td className="money py-1 pr-3 text-right">{formatKes(l.received_unit_cost_cents ?? l.unit_cost_cents)}</td>
                                 <td className="money py-1 text-right">{formatKes(l.line_cents)}</td>
                               </tr>
                             ))}

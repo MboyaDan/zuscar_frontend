@@ -402,7 +402,13 @@ export type PurchaseLine = {
   entered_unit_code: string;
   qty_base: number;
   unit_cost_cents: number;
+  /** What arrived, in the unit it was ordered in. Null until the delivery is received. */
+  received_qty: number | null;
+  received_qty_base: number | null;
+  received_unit_cost_cents: number | null;
+  /** What arrived at the price paid, or the order until it is received. */
   line_cents: number;
+  receipt_reversed: boolean;
 };
 export type Purchase = {
   id: number;
@@ -417,6 +423,9 @@ export type Purchase = {
   created_at: string;
   received_at: string | null;
   line_count: number;
+  /** What arrived at the price paid once received; the order before that. */
   total_cents: number;
+  /** Always what was written down. */
+  ordered_cents: number;
   lines?: PurchaseLine[];
 };
