@@ -287,3 +287,132 @@ export function ReverseDialog({ movement, canOverride, onClose, onDone }: Common
     </FormDialog>
   );
 }
+
+// ---- transfer ----
+
+export function TransferDialog({ item, locations, canOverride, onClose, onDone }: Common & { item: InventoryItem; locations: StockLocation[]; canOverride: boolean }) {
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [qty, setQty] = useState("");
+  const [unit, setUnit] = useState(String(item.base_unit.id));
+  const [note, setNote] = useState("");
+  const [override, setOverride] = useState(false);
+  const [overrideReason, setOverrideReason] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const attempt = useAttempt();
+  const n = parseWhole(qty);
+  const places = locations.filter((l) => l.active);
+  const here = item.balances.find((b) => String(b.location_id) === from)?.qty_base ?? 0;
+  return (
+    <FormDialog
+      open
+      title={`Move ${item.name}`}
+      submitLabel="Move stock"
+      onClose={onClose}
+      onFieldErrors={setErrors}
+      disabled={!from || !to || from === to || n === null || n < 1 || (override && !overrideReason.trim())}
+      onSubmit={async () => {
+        if (n === null) return;
+        const body: Record<string, unknown> = { item_id: item.id, from_location_id: Number(from), to_location_id: Number(to), qty: n, unit_id: Number(unit), note: note.trim() };
+        if (override) {
+          body.override_negative = true;
+          body.override_reason = overrideReason.trim();
+        }
+        try {
+          await api("/inventory/transfers", { method: "POST", body, idempotencyKey: attempt(body) });
+        } catch (err) {
+          if (err instanceof ApiError && err.code === "negative_stock" && canOverride) setOverride(true);
+          throw err;
+        }
+        onDone(`${item.name} was moved.`);
+      }}
+    >
+      <SelectField label="From" value={from} onChange={(e) => setFrom(e.target.value)} error={errors.from_location_id} required hint={from ? `Now: ${qtyText(here, item.base_unit.code)}` : undefined}>
+        <option value="">Choose a place</option>
+        {places.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+      </SelectField>
+      <SelectField label="To" value={to} onChange={(e) => setTo(e.target.value)} error={errors.to_location_id ?? (from && to && from === to ? "Choose a different place." : undefined)} required>
+        <option value="">Choose a place</option>
+        {places.filter((l) => String(l.id) !== from).map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+      </SelectField>
+      <div className="grid grid-cols-2 gap-3">
+        <TextField label="Quantity" inputMode="numeric" value={qty} onChange={(e) => setQty(e.target.value)} error={errors.qty ?? (qty && (n === null || n < 1) ? "Enter a whole number above 0." : undefined)} />
+        <SelectField label="In" value={unit} onChange={(e) => setUnit(e.target.value)}>
+          {unitChoices(item).map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}
+        </SelectField>
+      </div>
+      <TextField label="Note (optional)" value={note} maxLength={200} onChange={(e) => setNote(e.target.value)} error={errors.note} />
+      {override && (
+        <div className="space-y-2">
+          <Alert tone="info">This would take the source place below zero. You can allow it with a reason.</Alert>
+          <TextField label="Why below zero" value={overrideReason} maxLength={200} onChange={(e) => setOverrideReason(e.target.value)} error={errors.override_reason} />
+        </div>
+      )}
+    </FormDialog>
+  );
+}
+
+// ---- wastage, breakage, complimentary ----
+
+const KIND_LABEL = { wastage: "Wastage (spoiled or thrown away)", breakage: "Breakage (dropped or broken)", complimentary: "Complimentary (given away)" } as const;
+
+export function WastageDialog({ item, locations, canOverride, onClose, onDone }: Common & { item: InventoryItem; locations: StockLocation[]; canOverride: boolean }) {
+  const [loc, setLoc] = useState("");
+  const [kind, setKind] = useState<keyof typeof KIND_LABEL>("wastage");
+  const [qty, setQty] = useState("");
+  const [unit, setUnit] = useState(String(item.base_unit.id));
+  const [reason, setReason] = useState("");
+  const [override, setOverride] = useState(false);
+  const [overrideReason, setOverrideReason] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const attempt = useAttempt();
+  const n = parseWhole(qty);
+  const here = item.balances.find((b) => String(b.location_id) === loc)?.qty_base ?? 0;
+  return (
+    <FormDialog
+      open
+      title={`Take ${item.name} out of stock`}
+      submitLabel="Record"
+      danger
+      onClose={onClose}
+      onFieldErrors={setErrors}
+      disabled={!loc || n === null || n < 1 || !reason.trim() || (override && !overrideReason.trim())}
+      onSubmit={async () => {
+        if (n === null) return;
+        const body: Record<string, unknown> = { item_id: item.id, location_id: Number(loc), kind, qty: n, unit_id: Number(unit), reason: reason.trim() };
+        if (override) {
+          body.override_negative = true;
+          body.override_reason = overrideReason.trim();
+        }
+        try {
+          await api("/inventory/wastage", { method: "POST", body, idempotencyKey: attempt(body) });
+        } catch (err) {
+          if (err instanceof ApiError && err.code === "negative_stock" && canOverride) setOverride(true);
+          throw err;
+        }
+        onDone(`${MOVEMENT_LABEL[kind]} of ${item.name} was recorded.`);
+      }}
+    >
+      <SelectField label="What happened" value={kind} onChange={(e) => setKind(e.target.value as keyof typeof KIND_LABEL)}>
+        {(Object.keys(KIND_LABEL) as (keyof typeof KIND_LABEL)[]).map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
+      </SelectField>
+      <SelectField label="Place" value={loc} onChange={(e) => setLoc(e.target.value)} error={errors.location_id} required hint={loc ? `Now: ${qtyText(here, item.base_unit.code)}` : undefined}>
+        <option value="">Choose a place</option>
+        {locations.filter((l) => l.active).map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+      </SelectField>
+      <div className="grid grid-cols-2 gap-3">
+        <TextField label="Quantity" inputMode="numeric" value={qty} onChange={(e) => setQty(e.target.value)} error={errors.qty ?? (qty && (n === null || n < 1) ? "Enter a whole number above 0." : undefined)} />
+        <SelectField label="In" value={unit} onChange={(e) => setUnit(e.target.value)}>
+          {unitChoices(item).map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}
+        </SelectField>
+      </div>
+      <TextField label="Reason" value={reason} maxLength={200} onChange={(e) => setReason(e.target.value)} error={errors.reason} hint="For example: milk went off, glass dropped, drink for a guest." />
+      {override && (
+        <div className="space-y-2">
+          <Alert tone="info">This would take the place below zero. You can allow it with a reason.</Alert>
+          <TextField label="Why below zero" value={overrideReason} maxLength={200} onChange={(e) => setOverrideReason(e.target.value)} error={errors.override_reason} />
+        </div>
+      )}
+    </FormDialog>
+  );
+}
