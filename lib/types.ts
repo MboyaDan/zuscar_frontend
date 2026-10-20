@@ -466,3 +466,67 @@ export type StockCount = {
   difference_count: number;
   lines?: CountLine[];
 };
+
+// ---- Rooms (Stage 22) ----
+
+export type RoomType = {
+  id: number;
+  name: string;
+  /** Per night, tax included. */
+  base_rate_cents: number;
+  capacity: number;
+  tax_rate_id: number;
+  tax_name: string;
+  tax_rate_bp: number;
+  active: boolean;
+  room_count: number;
+};
+export type Room = {
+  id: number;
+  number: string;
+  room_type_id: number;
+  room_type: string;
+  base_rate_cents: number;
+  capacity: number;
+  floor: number | null;
+  physical_status: string;
+  active: boolean;
+};
+export type Guest = { id: number; full_name: string; phone: string; email: string; notes: string };
+export type ReservationStatus = "tentative" | "confirmed" | "checked_in" | "checked_out" | "cancelled" | "no_show";
+export type Reservation = {
+  id: number;
+  reservation_no: number;
+  guest_id: number;
+  guest_name: string;
+  guest_phone: string;
+  room_id: number;
+  room_number: string;
+  room_type: string;
+  status: ReservationStatus;
+  /** YYYY-MM-DD. The night of check_out is free for the next guest. */
+  check_in: string;
+  check_out: string;
+  nights: number;
+  adults: number;
+  nightly_rate_cents: number;
+  total_cents: number;
+  notes: string;
+  cancelled_reason: string;
+  created_at: string;
+};
+export type AvailabilityRoom = {
+  room_id: number;
+  number: string;
+  floor: number | null;
+  room_type_id: number;
+  room_type: string;
+  base_rate_cents: number;
+  capacity: number;
+  available: boolean;
+  holds: number;
+  blocking_reservation_no: number | null;
+  blocked_from?: string;
+  blocked_until?: string;
+  blocking_status?: string;
+};
