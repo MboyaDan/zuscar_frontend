@@ -1,13 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SelectField } from "@/components/catalogue/SelectField";
 import { FormDialog } from "@/components/FormDialog";
-import { Alert, Button, TextField } from "@/components/ui";
-import { api, newIdempotencyKey } from "@/lib/api";
+import { Alert, Button, LoadingState, TextField } from "@/components/ui";
+import { api, errorMessage, newIdempotencyKey } from "@/lib/api";
 import { parseWhole, unitChoices } from "@/lib/inventory";
-import { formatKes, parseKes } from "@/lib/money";
-import type { InventoryItem, Purchase, StockLocation, Supplier } from "@/lib/types";
+import { centsToInput, formatKes, parseKes } from "@/lib/money";
+import type { InventoryItem, Purchase, PurchaseLine, StockLocation, Supplier } from "@/lib/types";
 
 type Common = { onClose: () => void; onDone: (message: string) => void };
 
@@ -126,7 +126,7 @@ export function PurchaseDialog({ suppliers, items, onClose, onDone }: Common & {
                 {p.item ? unitChoices(p.item).map((u, n) => <option key={u.id} value={n === 0 ? "" : u.id}>{u.label}</option>) : <option value="">Choose an item first</option>}
               </SelectField>
             </div>
-            <TextField label="Price of one unit (KES)" inputMode="decimal" value={p.r.cost} onChange={(e) => patch(p.r.id, { cost: e.target.value })} error={p.costBad ? "Enter an amount up to 100,000.00." : undefined} hint="As on the supplier's invoice, for the unit chosen above." />
+            <TextField label="Price of one unit (KES)" inputMode="decimal" value={p.r.cost} onChange={(e) => patch(p.r.id, { cost: e.target.value })} error={p.costBad ? "Enter an amount up to 100,000.00." : undefined} hint="What it costs you, as on the supplier's invoice, for the unit chosen above. If you are VAT-registered and claim input VAT, enter the price before VAT." />
             {rows.length > 1 && <Button variant="secondary" onClick={() => setRows((rs) => rs.filter((r) => r.id !== p.r.id))}>Remove this item</Button>}
           </li>
         ))}
@@ -141,12 +141,49 @@ export function PurchaseDialog({ suppliers, items, onClose, onDone }: Common & {
 
 // ---- receive ----
 
+type Arrival = { qty: string; cost: string };
+
 export function ReceiveDialog({ purchase, locations, onClose, onDone }: Common & { purchase: Purchase; locations: StockLocation[] }) {
   const places = locations.filter((l) => l.active);
   const [loc, setLoc] = useState(String(places.find((l) => l.code === "main_store")?.id ?? ""));
   const [invoice, setInvoice] = useState(purchase.invoice_ref ?? "");
+  const [lines, setLines] = useState<PurchaseLine[]>();
+  const [loadError, setLoadError] = useState<string>();
+  const [arrived, setArrived] = useState<Record<number, Arrival>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const attempt = useAttempt();
+
+  useEffect(() => {
+    let alive = true;
+    api<{ purchase: Purchase }>(`/purchases/${purchase.id}`)
+      .then((r) => {
+        if (!alive) return;
+        const ls = r.purchase.lines ?? [];
+        setLines(ls);
+        setArrived(Object.fromEntries(ls.map((l) => [l.item_id, { qty: String(l.entered_qty), cost: centsToInput(l.unit_cost_cents) }])));
+      })
+      .catch((err) => alive && setLoadError(errorMessage(err)));
+    return () => {
+      alive = false;
+    };
+  }, [purchase.id]);
+
+  const parsed = (lines ?? []).map((l) => {
+    const a = arrived[l.item_id] ?? { qty: "", cost: "" };
+    const qty = parseWhole(a.qty);
+    const cost = parseKes(a.cost);
+    const qtyBad = qty === null || qty < 0;
+    const costBad = cost === null || cost > MAX_UNIT_COST_CENTS;
+    return { l, a, qty, cost, qtyBad, costBad };
+  });
+  const bad = parsed.some((p) => p.qtyBad || p.costBad);
+  const anyArrived = parsed.some((p) => (p.qty ?? 0) > 0);
+  const total = parsed.reduce((sum, p) => (p.qtyBad || p.costBad ? sum : sum + (p.qty ?? 0) * (p.cost ?? 0)), 0);
+
+  function patch(id: number, change: Partial<Arrival>) {
+    setArrived((m) => ({ ...m, [id]: { qty: m[id]?.qty ?? "", cost: m[id]?.cost ?? "", ...change } }));
+  }
+
   return (
     <FormDialog
       open
@@ -154,15 +191,38 @@ export function ReceiveDialog({ purchase, locations, onClose, onDone }: Common &
       submitLabel="Receive stock"
       onClose={onClose}
       onFieldErrors={setErrors}
-      disabled={!loc}
+      disabled={!loc || !lines || bad || !anyArrived}
       onSubmit={async () => {
-        const body = { location_id: Number(loc), invoice_ref: invoice.trim() };
+        const body = {
+          location_id: Number(loc),
+          invoice_ref: invoice.trim(),
+          lines: parsed.map((p) => ({ item_id: p.l.item_id, qty: p.qty!, unit_cost_cents: p.cost! })),
+        };
         await api(`/purchases/${purchase.id}/receive`, { method: "POST", body, idempotencyKey: attempt(body) });
         onDone(`Delivery #${purchase.purchase_no} was received. The stock is in.`);
       }}
     >
-      <p>{purchase.supplier_name} · {purchase.line_count} {purchase.line_count === 1 ? "item" : "items"} · <span className="money font-medium">{formatKes(purchase.total_cents)}</span></p>
-      <p className="text-sm text-slate-brand/80">This adds the stock now, with the prices on the delivery. A delivery cannot be received twice. If you receive something wrong, reverse it from the Stock page.</p>
+      <p>{purchase.supplier_name} · ordered <span className="money font-medium">{formatKes(purchase.ordered_cents)}</span></p>
+      <p className="text-sm text-slate-brand/80">Check what really arrived. Change a quantity if it was short (put 0 if it did not come) and the price if it was different. The stock is added with what you enter here. A delivery cannot be received twice. If you receive something wrong, reverse it from the Stock page.</p>
+      {loadError && <Alert tone="error">{loadError}</Alert>}
+      {!lines && !loadError && <LoadingState label="Loading the items" />}
+      {lines && (
+        <ul className="space-y-3">
+          {parsed.map((p) => (
+            <li key={p.l.item_id} className="space-y-2 rounded-md border border-stone-brand p-3">
+              <p className="font-medium">{p.l.item_name}</p>
+              <p className="text-sm text-slate-brand/80">Ordered: {p.l.entered_qty.toLocaleString("en-KE")} {p.l.entered_unit_code} at <span className="money">{formatKes(p.l.unit_cost_cents)}</span></p>
+              <div className="grid grid-cols-2 gap-3">
+                <TextField label={`Arrived (${p.l.entered_unit_code})`} inputMode="numeric" value={p.a.qty} onChange={(e) => patch(p.l.item_id, { qty: e.target.value })} error={p.qtyBad ? "Enter a whole number, 0 or more." : undefined} />
+                <TextField label="Price of one (KES)" inputMode="decimal" value={p.a.cost} onChange={(e) => patch(p.l.item_id, { cost: e.target.value })} error={p.costBad ? "Enter an amount up to 100,000.00." : undefined} />
+              </div>
+              {!p.qtyBad && p.qty !== p.l.entered_qty && <p className="text-sm font-medium text-ember">{p.qty === 0 ? "Did not arrive." : `${p.qty! < p.l.entered_qty ? "Short" : "More than ordered"}: ${p.qty!.toLocaleString("en-KE")} instead of ${p.l.entered_qty.toLocaleString("en-KE")}.`}</p>}
+            </li>
+          ))}
+        </ul>
+      )}
+      {errors.lines && <Alert tone="error">{errors.lines}</Alert>}
+      <p className="money text-right text-lg font-semibold">Arrived {formatKes(total)}</p>
       <SelectField label="Where did it arrive?" value={loc} onChange={(e) => setLoc(e.target.value)} error={errors.location_id} required>
         <option value="">Choose a place</option>
         {places.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
