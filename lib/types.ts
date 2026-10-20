@@ -514,6 +514,8 @@ export type Reservation = {
   notes: string;
   cancelled_reason: string;
   created_at: string;
+  stay_id: number | null;
+  folio_id: number | null;
 };
 export type AvailabilityRoom = {
   room_id: number;
@@ -529,4 +531,61 @@ export type AvailabilityRoom = {
   blocked_from?: string;
   blocked_until?: string;
   blocking_status?: string;
+};
+
+export type InHouseStay = {
+  stay_id: number;
+  folio_id?: number;
+  room_id: number;
+  room_number: string;
+  room_type: string;
+  guest_id: number;
+  guest_name: string;
+  reservation_no: number;
+  check_in: string;
+  expected_out: string;
+  adults: number;
+  /** Only sent to people who may view folios. */
+  balance_cents?: number;
+};
+export type FolioItem = {
+  id: number;
+  kind: "room_night" | "pos_charge" | "adjustment";
+  description: string;
+  amount_cents: number;
+  tax_cents: number;
+  night_date?: string;
+  reason?: string;
+  reverses_item_id: number | null;
+  sale_id: number | null;
+  posted_by_name: string;
+  created_at: string;
+  reversed: boolean;
+};
+export type FolioPayment = {
+  id: number;
+  purpose: string;
+  method: string;
+  status: PaymentStatus;
+  amount_cents: number;
+  reference?: string;
+  created_by_name: string;
+  created_at: string;
+};
+export type Folio = {
+  id: number;
+  folio_no: number;
+  status: "open" | "closed";
+  stay_id: number | null;
+  stay_status: string;
+  room_number: string;
+  guest_name: string;
+  guest_phone: string;
+  reservation_no: number | null;
+  check_in: string;
+  expected_out: string;
+  write_off_reason?: string;
+  totals: { items_cents: number; paid_cents: number; pending_cents: number; write_off_cents: number; balance_cents: number };
+  items: FolioItem[];
+  payments: FolioPayment[];
 };

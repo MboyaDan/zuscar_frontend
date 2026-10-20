@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { SelectField } from "@/components/catalogue/SelectField";
 import { BookingDialog, CancelBookingDialog, GuestDialog, RoomDialog, RoomTypeDialog, type BookingStart } from "@/components/rooms/RoomDialogs";
+import { FolioDialog, CheckInDialog, ROOM_STATUS_LABEL, RoomStatusButtons, RoomStatusDialog } from "@/components/rooms/StayDialogs";
 import { Alert, Button, EmptyState, ErrorState, LoadingState, TextField } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 import { formatDay, todayYmd } from "@/lib/format";
 import { formatKes } from "@/lib/money";
 import { useSession } from "@/lib/session";
-import type { AvailabilityRoom, Guest, Reservation, ReservationStatus, Room, RoomType, TaxRate } from "@/lib/types";
+import type { AvailabilityRoom, Guest, InHouseStay, Reservation, ReservationStatus, Room, RoomType, TaxRate } from "@/lib/types";
 
 type Load =
   | { status: "loading" }
@@ -21,9 +22,12 @@ type Dialog =
   | { kind: "cancel"; booking: Reservation }
   | { kind: "type"; type?: RoomType }
   | { kind: "room"; room?: Room }
-  | { kind: "guest"; guest?: Guest };
+  | { kind: "guest"; guest?: Guest }
+  | { kind: "checkin"; booking: Reservation }
+  | { kind: "folio"; id: number }
+  | { kind: "status"; room: Room; to: string; label: string };
 
-type Tab = "bookings" | "free" | "guests" | "rooms";
+type Tab = "bookings" | "house" | "free" | "guests" | "rooms";
 
 const STATUS_LABEL: Record<ReservationStatus, string> = {
   tentative: "On hold",
@@ -92,7 +96,7 @@ export default function RoomsPage() {
           .filter((b) => (filter === "open" ? OPEN.includes(b.status) : b.status === filter))
           .sort((a, b) => (filter === "open" ? a.check_in.localeCompare(b.check_in) || a.id - b.id : b.id - a.id))
       : [];
-  const tabs: [Tab, string][] = [["bookings", "Bookings"], ["free", "Free rooms"], ["guests", "Guests"], ["rooms", "Rooms and rates"]];
+  const tabs: [Tab, string][] = [["bookings", "Bookings"], ["house", "In the house"], ["free", "Free rooms"], ["guests", "Guests"], ["rooms", "Rooms and rates"]];
 
   return (
     <div className="space-y-4">
@@ -150,8 +154,21 @@ export default function RoomsPage() {
                     {b.cancelled_reason ? ` · ${b.cancelled_reason}` : ""}
                   </p>
                   {b.notes && <p className="mt-1 text-sm">{b.notes}</p>}
+                  {b.status === "checked_in" && b.folio_id !== null && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button onClick={() => setDialog({ kind: "folio", id: b.folio_id! })}>Open folio</Button>
+                    </div>
+                  )}
+                  {b.status === "checked_out" && b.folio_id !== null && can("folios.view") && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button variant="secondary" onClick={() => setDialog({ kind: "folio", id: b.folio_id! })}>Open folio</Button>
+                    </div>
+                  )}
                   {(b.status === "tentative" || b.status === "confirmed") && (
                     <div className="mt-3 flex flex-wrap gap-2">
+                      {b.status === "confirmed" && b.check_in <= today && b.check_out > today && (
+                        <Button onClick={() => setDialog({ kind: "checkin", booking: b })}>Check in</Button>
+                      )}
                       {b.status === "tentative" && (
                         <Button busy={busyId === b.id} onClick={() => act(b, "confirm", `Booking #${b.reservation_no} is confirmed. Room ${b.room_number} is yours for those nights.`)}>Confirm</Button>
                       )}
@@ -169,7 +186,9 @@ export default function RoomsPage() {
         </>
       )}
 
-      {load.status === "ready" && tab === "free" && <FreeRooms key={tick} types={load.types} rooms={load.rooms} onBook={(start) => setDialog({ kind: "book", start })} />}
+      {load.status === "ready" && tab === "house" && <InHouse key={`house-${tick}`} onOpen={(id) => setDialog({ kind: "folio", id })} />}
+
+      {load.status === "ready" && tab === "free" && <FreeRooms key={`free-${tick}`} types={load.types} rooms={load.rooms} onBook={(start) => setDialog({ kind: "book", start })} />}
 
       {load.status === "ready" && tab === "guests" && <GuestList refresh={tick} onEdit={(guest) => setDialog({ kind: "guest", guest })} onAdd={() => setDialog({ kind: "guest" })} />}
 
@@ -210,6 +229,8 @@ export default function RoomsPage() {
                     <div>
                       <h3 className="text-lg font-semibold">Room {r.number}{!r.active && <span className="ml-2 text-sm font-normal">(switched off)</span>}</h3>
                       <p className="text-sm text-slate-brand/80">{r.room_type}{r.floor !== null ? ` · floor ${r.floor}` : ""}</p>
+                      <p className="text-sm font-medium">{ROOM_STATUS_LABEL[r.physical_status] ?? r.physical_status}</p>
+                      {r.active && <RoomStatusButtons room={r} onChange={(to, label) => setDialog({ kind: "status", room: r, to, label })} />}
                     </div>
                     <Button variant="secondary" onClick={() => setDialog({ kind: "room", room: r })}>Edit</Button>
                   </li>
@@ -225,6 +246,11 @@ export default function RoomsPage() {
       {dialog?.kind === "cancel" && <CancelBookingDialog booking={dialog.booking} onClose={() => setDialog(undefined)} onDone={done} />}
       {load.status === "ready" && dialog?.kind === "type" && <RoomTypeDialog type={dialog.type} rates={load.rates} onClose={() => setDialog(undefined)} onDone={done} />}
       {load.status === "ready" && dialog?.kind === "room" && <RoomDialog room={dialog.room} types={load.types} onClose={() => setDialog(undefined)} onDone={done} />}
+      {dialog?.kind === "checkin" && (
+        <CheckInDialog bookingId={dialog.booking.id} summary={`${dialog.booking.guest_name}, room ${dialog.booking.room_number}, ${formatDay(dialog.booking.check_in)} to ${formatDay(dialog.booking.check_out)} (${dialog.booking.nights} night${dialog.booking.nights === 1 ? "" : "s"}, ${formatKes(dialog.booking.total_cents)}).`} onClose={() => setDialog(undefined)} onDone={done} />
+      )}
+      {load.status === "ready" && dialog?.kind === "folio" && <FolioDialog key={`folio-${dialog.id}`} folioId={dialog.id} rooms={load.rooms} onClose={() => setDialog(undefined)} onChanged={(m) => { if (m) setNotice(m); setTick((t) => t + 1); }} />}
+      {dialog?.kind === "status" && <RoomStatusDialog room={dialog.room} to={dialog.to} label={dialog.label} onClose={() => setDialog(undefined)} onDone={done} />}
       {dialog?.kind === "guest" && <GuestDialog guest={dialog.guest} onClose={() => setDialog(undefined)} onDone={done} />}
     </div>
   );
@@ -330,5 +356,35 @@ function GuestList({ refresh, onEdit, onAdd }: { refresh: number; onEdit: (g: Gu
           </ul>
         ))}
     </div>
+  );
+}
+
+function InHouse({ onOpen }: { onOpen: (folioId: number) => void }) {
+  const [state, setState] = useState<{ status: "loading" } | { status: "error"; message: string } | { status: "ready"; stays: InHouseStay[] }>({ status: "loading" });
+  useEffect(() => {
+    let alive = true;
+    api<{ stays: InHouseStay[] }>("/rooms/in-house")
+      .then((r) => alive && setState({ status: "ready", stays: r.stays }))
+      .catch((err) => alive && setState({ status: "error", message: errorMessage(err) }));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  if (state.status === "loading") return <LoadingState label="Loading guests in the house" />;
+  if (state.status === "error") return <Alert tone="error">{state.message}</Alert>;
+  if (state.stays.length === 0) return <EmptyState title="Nobody in the house">Guests appear here when they are checked in.</EmptyState>;
+  return (
+    <ul className="space-y-3">
+      {state.stays.map((s) => (
+        <li key={s.stay_id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-stone-brand bg-white p-4">
+          <div>
+            <h2 className="text-lg font-semibold">Room {s.room_number} · {s.guest_name}</h2>
+            <p className="text-sm text-slate-brand/80">{formatDay(s.check_in)} to {formatDay(s.expected_out)} · {s.room_type}</p>
+            {s.balance_cents !== undefined && <p className="money font-medium">Owes {formatKes(s.balance_cents)}</p>}
+          </div>
+          {s.folio_id !== undefined && <Button variant="secondary" onClick={() => onOpen(s.folio_id!)}>Open folio</Button>}
+        </li>
+      ))}
+    </ul>
   );
 }
