@@ -1,9 +1,10 @@
 "use client";
 
-import { ArrowLeft, Banknote, ChefHat, Minus, Plus, Printer, Search, Trash2, X } from "lucide-react";
+import { ArrowLeft, Banknote, BedDouble, ChefHat, Minus, Plus, Printer, Search, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChargeToRoomDialog } from "@/components/pos/ChargeToRoomDialog";
 import { AddItemDialog, ReasonDialog } from "@/components/pos/OrderDialogs";
 import { PrintDialog, type PrintTarget } from "@/components/print/PrintDialog";
 import { Alert, Button, EmptyState, ErrorState, LoadingState } from "@/components/ui";
@@ -26,6 +27,7 @@ export default function OrderPage() {
   const [adding, setAdding] = useState<MenuProduct | null>(null);
   const [cancelLine, setCancelLine] = useState<OrderLine | null>(null);
   const [cancelOrder, setCancelOrder] = useState(false);
+  const [charging, setCharging] = useState(false);
   const [sending, setSending] = useState(false);
   const [printing, setPrinting] = useState<PrintTarget | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -243,6 +245,9 @@ export default function OrderPage() {
                   <Banknote aria-hidden className="size-5" /> Take payment · {formatKes(order.subtotal_cents)}
                 </Link>
               )}
+              {can("folios.post") && active.length > 0 && (
+                <Button variant="secondary" onClick={() => setCharging(true)} className="w-full"><BedDouble aria-hidden className="size-5" /> Charge to a room</Button>
+              )}
               <Button onClick={() => void send()} busy={sending} disabled={unsent.length === 0} className="flex-1">
                 <ChefHat aria-hidden className="size-5" /> Send to kitchen{unsent.length > 0 ? ` (${unsent.length})` : ""}
               </Button>
@@ -255,6 +260,19 @@ export default function OrderPage() {
         </section>
       </div>
 
+      {charging && load.status === "ready" && (
+        <ChargeToRoomDialog
+          orderId={id}
+          version={load.order.version}
+          totalCents={load.order.subtotal_cents}
+          onClose={() => setCharging(false)}
+          onDone={(message) => {
+            setCharging(false);
+            setNotice({ tone: "success", text: message });
+            setTick((t) => t + 1);
+          }}
+        />
+      )}
       {printing && <PrintDialog key={JSON.stringify(printing)} target={printing} onClose={() => setPrinting(null)} />}
       <AddItemDialog
         key={adding?.id ?? "none"}

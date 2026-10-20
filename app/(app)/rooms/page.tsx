@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { SelectField } from "@/components/catalogue/SelectField";
 import { BookingDialog, CancelBookingDialog, GuestDialog, RoomDialog, RoomTypeDialog, type BookingStart } from "@/components/rooms/RoomDialogs";
+import { HousekeepingTab } from "@/components/rooms/Housekeeping";
 import { FolioDialog, CheckInDialog, ROOM_STATUS_LABEL, RoomStatusButtons, RoomStatusDialog } from "@/components/rooms/StayDialogs";
 import { Alert, Button, EmptyState, ErrorState, LoadingState, TextField } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
@@ -27,7 +28,7 @@ type Dialog =
   | { kind: "folio"; id: number }
   | { kind: "status"; room: Room; to: string; label: string };
 
-type Tab = "bookings" | "house" | "free" | "guests" | "rooms";
+type Tab = "bookings" | "house" | "housekeeping" | "free" | "guests" | "rooms";
 
 const STATUS_LABEL: Record<ReservationStatus, string> = {
   tentative: "On hold",
@@ -96,7 +97,7 @@ export default function RoomsPage() {
           .filter((b) => (filter === "open" ? OPEN.includes(b.status) : b.status === filter))
           .sort((a, b) => (filter === "open" ? a.check_in.localeCompare(b.check_in) || a.id - b.id : b.id - a.id))
       : [];
-  const tabs: [Tab, string][] = [["bookings", "Bookings"], ["house", "In the house"], ["free", "Free rooms"], ["guests", "Guests"], ["rooms", "Rooms and rates"]];
+  const tabs: [Tab, string][] = [["bookings", "Bookings"], ["house", "In the house"], ["housekeeping", "Housekeeping"], ["free", "Free rooms"], ["guests", "Guests"], ["rooms", "Rooms and rates"]];
 
   return (
     <div className="space-y-4">
@@ -187,6 +188,8 @@ export default function RoomsPage() {
       )}
 
       {load.status === "ready" && tab === "house" && <InHouse key={`house-${tick}`} onOpen={(id) => setDialog({ kind: "folio", id })} />}
+
+      {load.status === "ready" && tab === "housekeeping" && <HousekeepingTab rooms={load.rooms} onRoomsChanged={() => setTick((t) => t + 1)} />}
 
       {load.status === "ready" && tab === "free" && <FreeRooms key={`free-${tick}`} types={load.types} rooms={load.rooms} onBook={(start) => setDialog({ kind: "book", start })} />}
 

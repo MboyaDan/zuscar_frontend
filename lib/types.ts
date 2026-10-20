@@ -589,3 +589,19 @@ export type Folio = {
   items: FolioItem[];
   payments: FolioPayment[];
 };
+
+export type HousekeepingTask = {
+  id: number;
+  room_id: number;
+  room_number: string;
+  room_status: string;
+  kind: "clean" | "maintenance";
+  status: "open" | "in_progress" | "done" | "cancelled";
+  note: string;
+  assigned_to: number | null;
+  assigned_name: string;
+  created_name: string;
+  created_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+};
