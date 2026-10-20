@@ -429,3 +429,40 @@ export type Purchase = {
   ordered_cents: number;
   lines?: PurchaseLine[];
 };
+
+// ---- Stock counts (Stage 21) ----
+
+export type CountStatus = "draft" | "approved" | "cancelled";
+export type CountLine = {
+  item_id: number;
+  item_name: string;
+  base_unit_code: string;
+  counted_base: number;
+  entered_qty: number;
+  entered_unit_id: number;
+  entered_unit_code: string;
+  /** What the books said when this line was entered. */
+  expected_base: number;
+  /** Counted minus expected: what approving posts. */
+  variance_base: number;
+  /** What the books say now. Drafts only. */
+  balance_now: number | null;
+  saved_at: string;
+};
+export type StockCount = {
+  id: number;
+  count_no: number;
+  location_id: number;
+  location_name: string;
+  status: CountStatus;
+  note?: string;
+  created_by: number;
+  created_by_name: string;
+  created_at: string;
+  approved_by?: number;
+  approved_by_name?: string;
+  approved_at: string | null;
+  line_count: number;
+  difference_count: number;
+  lines?: CountLine[];
+};

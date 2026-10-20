@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { CountsPanel, LowStockPanel } from "@/components/inventory/Counts";
 import { AdjustDialog, ConversionsDialog, ItemDialog, NameCodeDialog, OpeningDialog, ReverseDialog, TransferDialog, WastageDialog } from "@/components/inventory/InventoryDialogs";
 import { Alert, Button, EmptyState, ErrorState, LoadingState } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
@@ -28,7 +29,7 @@ type Dialog =
 
 export default function InventoryPage() {
   const { state, can } = useSession();
-  const [tab, setTab] = useState<"stock" | "movements">("stock");
+  const [tab, setTab] = useState<"stock" | "movements" | "counts" | "low">("stock");
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [tick, setTick] = useState(0);
   const [dialog, setDialog] = useState<Dialog>();
@@ -81,9 +82,12 @@ export default function InventoryPage() {
       {notice && <Alert tone="success">{notice}</Alert>}
 
       <div role="tablist" className="flex gap-2">
-        {(["stock", "movements"] as const).map((t) => (
-          <button key={t} role="tab" aria-selected={tab === t} className={`target rounded-md border px-4 py-2 font-medium ${tab === t ? "border-teal-brand bg-teal-brand text-white" : "border-stone-brand bg-white"}`} onClick={() => setTab(t)}>
-            {t === "stock" ? "Stock levels" : "Movements"}
+        {(["stock", "movements", "low", ...(manage ? (["counts"] as const) : [])] as const).map((t) => (
+          <button key={t} role="tab" aria-selected={tab === t} className={`target rounded-md border px-4 py-2 font-medium ${tab === t ? "border-teal-brand bg-teal-brand text-white" : "border-stone-brand bg-white"}`} onClick={() => {
+              setTab(t);
+              setNotice(undefined);
+            }}>
+            {t === "stock" ? "Stock levels" : t === "movements" ? "Movements" : t === "low" ? "Low stock" : "Counts"}
           </button>
         ))}
       </div>
@@ -148,6 +152,9 @@ export default function InventoryPage() {
       {load.status === "ready" && tab === "movements" && (
         <Movements items={load.items} locations={load.locations} tick={tick} manage={manage} onReverse={(m) => setDialog({ kind: "reverse", movement: m })} />
       )}
+
+      {load.status === "ready" && tab === "low" && <LowStockPanel tick={tick} />}
+      {load.status === "ready" && tab === "counts" && manage && <CountsPanel items={load.items} locations={load.locations} onChanged={() => setTick((t) => t + 1)} />}
 
       {load.status === "ready" && dialog?.kind === "item" && <ItemDialog item={dialog.item} units={load.units} onClose={() => setDialog(undefined)} onDone={done} />}
       {load.status === "ready" && dialog?.kind === "conversions" && <ConversionsDialog item={dialog.item} units={load.units} onClose={() => setDialog(undefined)} onDone={done} />}
