@@ -56,11 +56,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {menuOpen ? <X aria-hidden className="size-6" /> : <Menu aria-hidden className="size-6" />}
           </button>
           <Logo variant="reversed" className="h-9 w-auto" />
-          <div className="ml-auto flex items-center gap-4">
+          <div className="ml-auto flex min-w-0 items-center gap-4">
             <ConnectionIndicator />
-            <details className="relative">
+            <details className="relative min-w-0">
               <summary className="target flex cursor-pointer list-none items-center rounded-md px-2 hover:bg-cream/10">
-                <span className="font-medium">{me.user.display_name}</span>
+                <span className="block max-w-[9rem] truncate font-medium sm:max-w-none">{me.user.display_name}</span>
               </summary>
               <div className="absolute right-0 z-20 mt-2 w-60 rounded-md border border-stone-brand bg-white p-2 text-slate-brand shadow-lg">
                 <p className="px-3 py-2 text-sm">

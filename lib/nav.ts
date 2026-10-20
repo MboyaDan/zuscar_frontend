@@ -1,4 +1,4 @@
-import { Banknote, Boxes, Truck, ChefHat, FilePenLine, Printer, BadgeCheck, ClipboardList, LayoutDashboard, ReceiptText, Receipt, ScrollText, Settings, ShieldCheck, UtensilsCrossed, Users, type LucideIcon } from "lucide-react";
+import { Banknote, BedDouble, Boxes, Truck, ChefHat, FilePenLine, Printer, BadgeCheck, ClipboardList, LayoutDashboard, ReceiptText, Receipt, ScrollText, Settings, ShieldCheck, UtensilsCrossed, Users, type LucideIcon } from "lucide-react";
 
 export type NavItem = {
   href: string;
@@ -19,6 +19,7 @@ export const NAV: NavItem[] = [
   { href: "/outage", label: "Outage entries", icon: FilePenLine, permission: "payments.reconcile", description: "Enter paper receipts written while the system was down. Each paper receipt can be entered once." },
   { href: "/inventory", label: "Stock", icon: Boxes, permission: "inventory.view", description: "What is in stock at each place, opening stock, adjustments and every movement." },
   { href: "/purchases", label: "Deliveries", icon: Truck, permission: "purchasing.manage", description: "Suppliers and the stock they deliver: write a delivery down, then receive it into a place with its cost." },
+  { href: "/rooms", label: "Rooms", icon: BedDouble, permission: "rooms.manage", description: "Bookings, free rooms for given nights, guests, and the rooms and their rates." },
   { href: "/shift", label: "My shift", icon: Banknote, permission: "shifts.manage", description: "Open your till shift, record cash in and out, count the drawer and close." },
   { href: "/shifts", label: "Shifts", icon: ClipboardList, permission: "shifts.close", description: "Past and open shifts, with any cash difference, ready to be checked." },
   { href: "/payments", label: "Payments", icon: BadgeCheck, permission: "payments.reconcile", description: "M-Pesa, card and bank payments waiting for you to confirm." },
