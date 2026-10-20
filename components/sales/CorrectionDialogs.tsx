@@ -55,7 +55,7 @@ export function VoidDialog({ sale, onClose, onDone }: { sale: Sale; onClose: () 
       }}
     >
       <Alert tone="info">
-        A void cancels a sale that should never have happened. The whole sale is taken back and the receipt number is kept. It can only be done on the day of the sale. After that, use Refund.
+        A void cancels a sale that should never have happened. The whole sale is taken back and the receipt number is kept. It can only be done on the day of the sale. After that, use Refund. Stock the sale took is put back.
       </Alert>
       {back.length > 0 ? (
         <div>
@@ -95,6 +95,7 @@ type Quoted = { key: string; quote?: RefundQuote; error?: string };
 export function RefundDialog({ sale, onClose, onDone }: { sale: Sale; onClose: () => void; onDone: (text: string) => void }) {
   const [qty, setQty] = useState<Record<number, number>>({});
   const [reason, setReason] = useState("");
+  const [restock, setRestock] = useState(false);
   const [pay, setPay] = useState<Record<string, string>>({});
   const [refs, setRefs] = useState<Record<string, string>>({});
   const [quoted, setQuoted] = useState<Quoted>({ key: "" });
@@ -141,6 +142,7 @@ export function RefundDialog({ sale, onClose, onDone }: { sale: Sale; onClose: (
         if (!quote) return;
         const body = {
           reason: clean,
+          restock,
           lines: lines.map(([id, n]) => ({ sale_item_id: Number(id), qty: n })),
           payouts: Object.entries(entered).filter(([, v]) => (v ?? 0) > 0).map(([method, v]) => ({ method, amount_cents: v as number, reference: (refs[method] ?? "").trim() })),
         };
@@ -205,6 +207,10 @@ export function RefundDialog({ sale, onClose, onDone }: { sale: Sale; onClose: (
         </div>
       )}
 
+      <label className="target flex items-start gap-3">
+        <input type="checkbox" className="mt-1 size-4" checked={restock} onChange={(e) => setRestock(e.target.checked)} />
+        <span>Put the items back in stock. Tick this when the item is still good and can be sold again, such as a sealed bottle. Leave it empty for food or drink that is thrown away. Items that do not track stock are not affected.</span>
+      </label>
       <TextField label="Reason" value={reason} maxLength={200} hint="For example: customer returned one, wrong item." error={errors.reason} onChange={(e) => setReason(e.target.value)} />
     </FormDialog>
   );
