@@ -68,6 +68,21 @@
 .print-doc .edge { background: #000 !important; width: 4mm; height: 4mm; }
 .print-doc .ruler { height: 5mm; width: 72mm; background-image: repeating-linear-gradient(to right, #000 0, #000 2px, transparent 2px, transparent 10mm); }
 .print-only { display: none; }
+/* A report on an A4 sheet (Stage 26). The page size is set by the Print button (see printSheet in lib/reports.ts), because a
+   named page here made the browser break the page between every block. */
+.report-sheet { color: #000; background: #fff; font-family: system-ui, sans-serif; font-size: 11px; line-height: 1.35; }
+.report-sheet h1 { font-size: 18px; margin: 0 0 2px; }
+.report-sheet h2 { font-size: 13px; margin: 14px 0 4px; break-after: avoid; }
+.report-sheet .meta { margin: 0 0 8px; color: #000; }
+.report-sheet table { width: 100%; border-collapse: collapse; break-inside: auto; }
+.report-sheet tr { break-inside: avoid; }
+.report-sheet th, .report-sheet td { border-bottom: 1px solid #000; padding: 3px 4px; text-align: left; vertical-align: top; }
+.report-sheet th { border-bottom-width: 2px; }
+.report-sheet .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.report-sheet tfoot td { font-weight: 700; border-top: 2px solid #000; }
+.report-sheet .notes { margin: 12px 0 0; padding-left: 16px; }
+.report-sheet .sign { margin-top: 28px; }
+.report-sheet .sign p { margin: 18px 0; }
 @media print {
   @page { size: 80mm auto; margin: 0; }
   html, body { background: #fff !important; }
