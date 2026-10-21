@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Button, EmptyState, ErrorState, LoadingState } from "@/components/ui";
 import { api, errorMessage, newIdempotencyKey } from "@/lib/api";
+import { handOffOrder, prefetchMenu } from "@/lib/pos-cache";
 import { formatKes } from "@/lib/money";
 import { useSession } from "@/lib/session";
 import type { DiningTable, Order, OrderSummary } from "@/lib/types";
@@ -22,6 +23,11 @@ export default function PosHomePage() {
   const allowed = can("orders.manage");
 
   const [tick, setTick] = useState(0);
+
+  // Start loading the menu now, so the order screen can paint at once when a table is tapped.
+  useEffect(() => {
+    if (allowed) prefetchMenu();
+  }, [allowed]);
 
   useEffect(() => {
     if (!allowed) return;
@@ -56,6 +62,7 @@ export default function PosHomePage() {
       const body = target === "takeaway" ? { order_type: "takeaway" } : { order_type: "dine_in", table_id: target.id };
       const res = await api<{ order: Order }>("/orders", { method: "POST", body, idempotencyKey: pending.current.key });
       pending.current = null;
+      handOffOrder(res.order);
       router.push(`/pos/${res.order.id}`);
     } catch (err) {
       setError(errorMessage(err));
