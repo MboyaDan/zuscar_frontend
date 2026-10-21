@@ -10,6 +10,7 @@ import { PrintDialog, type PrintTarget } from "@/components/print/PrintDialog";
 import { Alert, Button, EmptyState, ErrorState, LoadingState } from "@/components/ui";
 import { ApiError, api, errorMessage, newIdempotencyKey } from "@/lib/api";
 import { formatKes } from "@/lib/money";
+import { dropHandedOffOrder, fetchMenu, peekHandedOffOrder, peekMenu } from "@/lib/pos-cache";
 import { useSession } from "@/lib/session";
 import type { KitchenTicket, MenuCategory, MenuProduct, Order, OrderLine } from "@/lib/types";
 
@@ -20,7 +21,12 @@ export default function OrderPage() {
   const { state, can } = useSession();
   const params = useParams<{ orderId: string }>();
   const id = Number(params.orderId);
-  const [load, setLoad] = useState<Load>({ status: "loading" });
+  const [load, setLoad] = useState<Load>(() => {
+    // Paint at once when the order came back from creating it and the menu was loaded ahead of time.
+    const order = peekHandedOffOrder(Number(params.orderId));
+    const menu = peekMenu();
+    return order && menu ? { status: "ready", order, menu } : { status: "loading" };
+  });
   const [notice, setNotice] = useState<Notice>();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<number | "all">("all");
@@ -41,8 +47,9 @@ export default function OrderPage() {
   useEffect(() => {
     if (!allowed || !Number.isInteger(id) || id <= 0) return;
     let alive = true;
-    Promise.all([api<{ order: Order }>(`/orders/${id}`), api<{ categories: MenuCategory[] }>("/menu")])
-      .then(([o, m]) => alive && setLoad({ status: "ready", order: o.order, menu: m.categories }))
+    dropHandedOffOrder();
+    Promise.all([api<{ order: Order }>(`/orders/${id}`), fetchMenu()])
+      .then(([o, categories]) => alive && setLoad({ status: "ready", order: o.order, menu: categories }))
       .catch((err) => alive && setLoad({ status: "error", message: err instanceof ApiError && err.status === 404 ? "That order does not exist, or it is not yours to open." : errorMessage(err) }));
     return () => {
       alive = false;

@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { api, ApiError, UNAUTHENTICATED_EVENT } from "@/lib/api";
+import { clearPosCache } from "@/lib/pos-cache";
 import type { LoginResult, Me } from "@/lib/types";
 
 type State =
@@ -49,7 +50,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const onUnauthenticated = () => setState({ status: "anonymous" });
+    const onUnauthenticated = () => {
+      clearPosCache();
+      setState({ status: "anonymous" });
+    };
     window.addEventListener(UNAUTHENTICATED_EVENT, onUnauthenticated);
     return () => window.removeEventListener(UNAUTHENTICATED_EVENT, onUnauthenticated);
   }, []);
@@ -57,6 +61,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const signIn = useCallback(
     async (username: string, password: string) => {
       const result = await api<LoginResult>("/auth/login", { method: "POST", body: { username, password } });
+      clearPosCache();
       await refresh();
       return result;
     },
@@ -69,6 +74,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // the server session may already be gone; the browser is signed out either way
     }
+    clearPosCache();
     setState({ status: "anonymous" });
   }, []);
 
