@@ -1,4 +1,4 @@
-import { Banknote, BedDouble, Boxes, Truck, ChefHat, FilePenLine, BarChart3, Printer, BadgeCheck, ClipboardList, LayoutDashboard, ReceiptText, Receipt, ScrollText, Settings, ShieldCheck, UtensilsCrossed, Users, type LucideIcon } from "lucide-react";
+import { Wallet, Banknote, BedDouble, Boxes, Truck, ChefHat, FilePenLine, BarChart3, Printer, BadgeCheck, ClipboardList, LayoutDashboard, ReceiptText, Receipt, ScrollText, Settings, ShieldCheck, UtensilsCrossed, Users, type LucideIcon } from "lucide-react";
 
 export type NavItem = {
   href: string;
@@ -20,7 +20,8 @@ export const NAV: NavItem[] = [
   { href: "/inventory", label: "Stock", icon: Boxes, permission: "inventory.view", description: "What is in stock at each place, opening stock, adjustments and every movement." },
   { href: "/purchases", label: "Deliveries", icon: Truck, permission: "purchasing.manage", description: "Suppliers and the stock they deliver: write a delivery down, then receive it into a place with its cost." },
   { href: "/rooms", label: "Rooms", icon: BedDouble, permission: "rooms.manage", description: "Bookings, free rooms for given nights, guests, and the rooms and their rates." },
-  { href: "/reports", label: "Reports", icon: BarChart3, permission: "reports.view", description: "Sales, collections, balances due, discounts and refunds, stock and rooms, with a CSV download for those allowed." },
+  { href: "/expenses", label: "Expenses", icon: Wallet, permission: "expenses.manage", description: "Rent, power, wages and other money spent: enter it, and cancel a wrong entry with a reason." },
+  { href: "/reports", label: "Reports", icon: BarChart3, permission: "reports.view", description: "Sales, collections, balances due, discounts and refunds, stock, rooms, expenses and estimated profit, and the end-of-day closing summary to print, with a CSV download for those allowed." },
   { href: "/shift", label: "My shift", icon: Banknote, permission: "shifts.manage", description: "Open your till shift, record cash in and out, count the drawer and close." },
   { href: "/shifts", label: "Shifts", icon: ClipboardList, permission: "shifts.close", description: "Past and open shifts, with any cash difference, ready to be checked." },
   { href: "/payments", label: "Payments", icon: BadgeCheck, permission: "payments.reconcile", description: "M-Pesa, card and bank payments waiting for you to confirm." },
