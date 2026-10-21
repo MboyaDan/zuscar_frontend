@@ -3,7 +3,7 @@
 import { ArrowLeft, Banknote, BedDouble, ChefHat, Minus, Plus, Printer, Search, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChargeToRoomDialog } from "@/components/pos/ChargeToRoomDialog";
 import { AddItemDialog, ReasonDialog } from "@/components/pos/OrderDialogs";
 import { PrintDialog, type PrintTarget } from "@/components/print/PrintDialog";
@@ -39,22 +39,37 @@ export default function OrderPage() {
   const searchRef = useRef<HTMLInputElement>(null);
   // The send key belongs to one order version: the same tap retried reuses it, a changed order gets a new one (NN-05).
   const sendKey = useRef<{ version: number; key: string } | null>(null);
+  // The newest order we know of, and a line of changes waiting their turn. Taps made while a change is still travelling
+  // (slow network) must not all carry the same old version, or the API rightly answers "order_changed" for the later ones.
+  const latest = useRef<Order | null>(null);
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
   const allowed = can("orders.manage");
 
   const [tick, setTick] = useState(0);
-  const reload = useCallback(() => setTick((n) => n + 1), []);
+  const reload = () => setTick((n) => n + 1);
 
   useEffect(() => {
     if (!allowed || !Number.isInteger(id) || id <= 0) return;
     let alive = true;
     dropHandedOffOrder();
     Promise.all([api<{ order: Order }>(`/orders/${id}`), fetchMenu()])
-      .then(([o, categories]) => alive && setLoad({ status: "ready", order: o.order, menu: categories }))
+      .then(([o, categories]) => {
+        if (!alive) return;
+        // A slow refresh must never put an older copy over a change we already made.
+        const cur = latest.current;
+        const order = cur && cur.id === o.order.id && cur.version > o.order.version ? cur : o.order;
+        latest.current = order;
+        setLoad({ status: "ready", order, menu: categories });
+      })
       .catch((err) => alive && setLoad({ status: "error", message: err instanceof ApiError && err.status === 404 ? "That order does not exist, or it is not yours to open." : errorMessage(err) }));
     return () => {
       alive = false;
     };
   }, [allowed, id, tick]);
+
+  useEffect(() => {
+    if (load.status === "ready" && (!latest.current || latest.current.version <= load.order.version)) latest.current = load.order;
+  }, [load]);
 
   // "/" jumps to the search box from anywhere on the screen.
   useEffect(() => {
@@ -88,10 +103,18 @@ export default function OrderPage() {
   const active = order.items.filter((l) => l.status === "active");
   const unsent = active.filter((l) => l.kitchen_routed && !l.sent_to_kitchen);
 
-  /** Every change carries the version the screen showed; if someone else changed the order the API says so and we refresh. */
-  async function change<T extends { order: Order }>(path: string, method: "POST" | "PATCH", body: Record<string, unknown>, headers?: { idempotencyKey?: string }): Promise<T> {
+  /** Run one thing after everything queued before it has finished, whether those succeeded or not. */
+  function enqueue<T>(fn: () => Promise<T>): Promise<T> {
+    const p = queue.current.then(fn, fn);
+    queue.current = p.catch(() => undefined);
+    return p;
+  }
+
+  /** Every change carries the newest version we know; if someone else really changed the order the API says so and we refresh. */
+  async function sendChange<T extends { order: Order }>(path: string, method: "POST" | "PATCH", body: Record<string, unknown>, headers?: { idempotencyKey?: string }): Promise<T> {
     try {
-      const res = await api<T>(path, { method, body: { ...body, expected_version: order.version }, ...headers });
+      const res = await api<T>(path, { method, body: { ...body, expected_version: latest.current?.version ?? order.version }, ...headers });
+      latest.current = res.order;
       setLoad({ status: "ready", order: res.order, menu });
       return res;
     } catch (err) {
@@ -103,12 +126,19 @@ export default function OrderPage() {
     }
   }
 
+  function change<T extends { order: Order }>(path: string, method: "POST" | "PATCH", body: Record<string, unknown>, headers?: { idempotencyKey?: string }): Promise<T> {
+    return enqueue(() => sendChange<T>(path, method, body, headers));
+  }
+
   async function addLine(p: MenuProduct, qty: number, modifierIds: number[], note: string) {
     setNotice(undefined);
-    // Tapping the same plain product again adds to its unsent line instead of making a new one.
-    const same = !modifierIds.length && !note ? active.find((l) => l.product_id === p.id && !l.sent_to_kitchen && !l.modifiers.length && !l.note) : undefined;
-    if (same) await change(`/orders/${id}/items/${same.id}`, "PATCH", { qty: same.qty + qty });
-    else await change(`/orders/${id}/items`, "POST", { product_id: p.id, qty, modifier_ids: modifierIds, note });
+    // Decided when this tap's turn comes, from the newest order, so quick taps on one product add up on one line.
+    await enqueue(async () => {
+      const lines = (latest.current ?? order).items.filter((l) => l.status === "active");
+      const same = !modifierIds.length && !note ? lines.find((l) => l.product_id === p.id && !l.sent_to_kitchen && !l.modifiers.length && !l.note) : undefined;
+      if (same) await sendChange(`/orders/${id}/items/${same.id}`, "PATCH", { qty: same.qty + qty });
+      else await sendChange(`/orders/${id}/items`, "POST", { product_id: p.id, qty, modifier_ids: modifierIds, note });
+    });
   }
 
   async function quickAdd(p: MenuProduct) {
@@ -124,17 +154,24 @@ export default function OrderPage() {
     }
   }
 
-  async function setQty(l: OrderLine, qty: number) {
+  async function bumpQty(l: OrderLine, delta: number) {
     setNotice(undefined);
     try {
-      await change(`/orders/${id}/items/${l.id}`, "PATCH", { qty });
+      // Worked out on this tap's turn from the newest copy, so quick taps on + or - each count.
+      await enqueue(async () => {
+        const cur = (latest.current ?? order).items.find((x) => x.id === l.id && x.status === "active");
+        if (!cur) return;
+        const qty = Math.min(999, Math.max(1, cur.qty + delta));
+        if (qty !== cur.qty) await sendChange(`/orders/${id}/items/${l.id}`, "PATCH", { qty });
+      });
     } catch (err) {
       if (!(err instanceof ApiError && err.code === "order_changed")) setNotice({ tone: "error", text: errorMessage(err) });
     }
   }
 
   async function send() {
-    if (sendKey.current?.version !== order.version) sendKey.current = { version: order.version, key: newIdempotencyKey() };
+    const sendVersion = latest.current?.version ?? order.version;
+    if (sendKey.current?.version !== sendVersion) sendKey.current = { version: sendVersion, key: newIdempotencyKey() };
     setSending(true);
     setNotice(undefined);
     try {
@@ -231,8 +268,8 @@ export default function OrderPage() {
                   </div>
                   {editable && l.status === "active" && (
                     <div className="mt-1 flex items-center gap-1">
-                      <button type="button" aria-label={`One fewer ${l.name}`} disabled={l.qty <= 1} onClick={() => void setQty(l, l.qty - 1)} className="target inline-flex items-center justify-center rounded-md border border-stone-brand disabled:opacity-40"><Minus aria-hidden className="size-4" /></button>
-                      <button type="button" aria-label={`One more ${l.name}`} disabled={l.qty >= 999} onClick={() => void setQty(l, l.qty + 1)} className="target inline-flex items-center justify-center rounded-md border border-stone-brand disabled:opacity-40"><Plus aria-hidden className="size-4" /></button>
+                      <button type="button" aria-label={`One fewer ${l.name}`} disabled={l.qty <= 1} onClick={() => void bumpQty(l, -1)} className="target inline-flex items-center justify-center rounded-md border border-stone-brand disabled:opacity-40"><Minus aria-hidden className="size-4" /></button>
+                      <button type="button" aria-label={`One more ${l.name}`} disabled={l.qty >= 999} onClick={() => void bumpQty(l, 1)} className="target inline-flex items-center justify-center rounded-md border border-stone-brand disabled:opacity-40"><Plus aria-hidden className="size-4" /></button>
                       <button type="button" onClick={() => setCancelLine(l)} className="target ml-auto inline-flex items-center gap-1 rounded-md px-2 text-danger hover:bg-stone-brand/50"><Trash2 aria-hidden className="size-4" /> Cancel line</button>
                     </div>
                   )}
