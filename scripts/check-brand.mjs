@@ -13,6 +13,14 @@ for (const [, file, w, h] of entries) {
   if (!vb || vb[1] !== w || vb[2] !== h) { console.error(`MISMATCH ${file}: viewBox=${vb?.slice(1).join("x")} brand.ts=${w}x${h}`); bad++; }
   else console.log(`ok ${file} ${w}x${h}`);
 }
+// The receipt logo's PNG size must match RECEIPT_LOGO in lib/print.ts (read from the PNG IHDR header).
+const printSrc = fs.readFileSync(path.join(process.cwd(), "lib", "print.ts"), "utf8");
+const rl = printSrc.match(/RECEIPT_LOGO = \{ src: "\/brand\/([^"]+)", width: (\d+), height: (\d+)/);
+if (!rl) throw new Error("RECEIPT_LOGO not found in lib/print.ts");
+const png = fs.readFileSync(path.join(dir, rl[1]));
+const [pw, ph] = [png.readUInt32BE(16), png.readUInt32BE(20)];
+if (String(pw) !== rl[2] || String(ph) !== rl[3]) { console.error(`MISMATCH ${rl[1]}: png=${pw}x${ph} print.ts=${rl[2]}x${rl[3]}`); bad++; }
+else console.log(`ok ${rl[1]} ${pw}x${ph}`);
 for (const f of ["zuscar-receipt-logo.png", "zuscar-favicon-16.png", "zuscar-favicon-32.png", "zuscar-favicon-64.png"]) {
   if (!fs.existsSync(path.join(dir, f))) { console.error(`MISSING ${f}`); bad++; }
 }
