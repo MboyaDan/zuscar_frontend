@@ -55,7 +55,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             {menuOpen ? <X aria-hidden className="size-6" /> : <Menu aria-hidden className="size-6" />}
           </button>
-          <Logo variant="reversed" className="h-9 w-auto" />
+          <Logo variant="reversed" className="h-9 w-auto min-w-0 shrink object-contain object-left" />
           <div className="ml-auto flex min-w-0 items-center gap-4">
             <ConnectionIndicator />
             <details className="relative min-w-0">

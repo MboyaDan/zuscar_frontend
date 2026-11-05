@@ -99,7 +99,7 @@ export function reprintBanner(job: Pick<PrintJob, "is_reprint" | "copy_no">): st
   return job.is_reprint ? `REPRINT · COPY ${job.copy_no}` : null;
 }
 
-export const RECEIPT_LOGO = { src: "/brand/zuscar-receipt-logo.png", width: 384, height: 109 } as const;
+export const RECEIPT_LOGO = { src: "/brand/zuscar-receipt-logo.png", width: 384, height: 189 } as const;
 
 /** Date and time in the business's own time zone, so a receipt reads the same wherever it is printed. */
 export function stamp(iso: string, timeZone: string): string {
